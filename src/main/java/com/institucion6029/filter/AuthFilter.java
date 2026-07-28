@@ -1,0 +1,74 @@
+package com.institucion6029.filter;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import com.institucion6029.model.Usuario;
+
+@WebFilter(urlPatterns = {"/dashboard/*", "/matricula/*", "/asistencia/*"})
+public class AuthFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        
+        HttpServletRequest req = (HttpServletRequest) request;
+        HttpServletResponse res = (HttpServletResponse) response;
+        HttpSession session = req.getSession(false);
+
+        String uri = req.getRequestURI();
+        String contextPath = req.getContextPath();
+
+        // 1. REGLA DE EXCLUSIÓN TOTAL: Si la URL es el login o recursos públicos, déjalo pasar siempre
+        if (uri.endsWith("/login") || uri.endsWith("/login.jsp") || uri.contains("/css/") || uri.contains("/js/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // 2. Verificar autenticación básica
+        boolean loggedIn = (session != null && session.getAttribute("usuario") != null);
+
+        if (loggedIn) {
+            Usuario user = (Usuario) session.getAttribute("usuario");
+            
+            // Si la ruta solicitada es exactamente la raíz del dashboard, pasa directo sin validar módulos
+            if (uri.endsWith("/dashboard")) {
+                chain.doFilter(request, response);
+                return;
+            }
+
+            // 3. REGLA ESTRICTA PARA MATRÍCULA (Solo Rol 1 puede pasar)
+            if (uri.contains("/matricula")) {
+                if (user.getIdRol() == 1) {
+                    chain.doFilter(request, response);
+                } else {
+                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoPadre");
+                }
+                return;
+            }
+            
+            // 4. REGLA ESTRICTA PARA ASISTENCIA (Solo Rol 2 puede pasar)
+            if (uri.contains("/asistencia")) {
+                if (user.getIdRol() == 2) {
+                    chain.doFilter(request, response);
+                } else {
+                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoDocente");
+                }
+                return;
+            }
+            
+            // Cualquier otra ruta autenticada permitida
+            chain.doFilter(request, response);
+            return;
+
+        } else {
+            // 5. Redirección limpia al login si la sesión expiró o no existe
+            res.sendRedirect(contextPath + "/login.jsp?error=SesionExpirada");
+            return;
+        }
+    }
+
+}

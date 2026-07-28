@@ -1,0 +1,3 @@
+db.url=jdbc:mysql://localhost:3306/institucion6029?useSSL=false&serverTimezone=America/Lima&characterEncoding=UTF-8
+db.user=TU_USUARIO
+db.password=TU_CONTRASENIA

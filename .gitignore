@@ -1,0 +1,21 @@
+# Local database credentials
+src/main/resources/db.properties
+
+# Build output
+build/
+
+# Eclipse project files
+.classpath
+.project
+.settings/
+
+# Local Tomcat/workspace metadata
+Servers/
+.metadata/
+
+# Temporary and log files
+*.log
+*.tmp
+.DS_Store
+
+build/
