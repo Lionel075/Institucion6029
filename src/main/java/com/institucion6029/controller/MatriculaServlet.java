@@ -129,17 +129,7 @@ public class MatriculaServlet extends HttpServlet {
                 }
 
                 response.sendRedirect(request.getContextPath() + "/dashboard");
-
-                if (seccionAsignada != null) {
-                    // 5-A. Flash attribute de éxito
-                    session.setAttribute("flashMsg", "ReservaExitosa");
-                } else {
-                    // 5-B. Las secciones A, B y C del grado están completas (32/32 cada una)
-                    session.setAttribute("flashError", "GradoSinVacantes");
-                }
-
-                response.sendRedirect(request.getContextPath() + "/dashboard");
-
+                
             } catch (NumberFormatException e) {
                 System.err.println("[MatriculaServlet] idAlumno inválido: " + e.getMessage());
                 session.setAttribute("flashError", "ErrorInterno");
