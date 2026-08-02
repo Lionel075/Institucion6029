@@ -15,6 +15,7 @@ import com.institucion6029.model.ReservaMatricula;
 import com.institucion6029.model.Alumno;
 import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
+import com.institucion6029.exception.ErrorTransaccionException;
 
 @WebServlet("/matricula")
 public class MatriculaServlet extends HttpServlet {
@@ -120,16 +121,25 @@ public class MatriculaServlet extends HttpServlet {
                     session.setAttribute("flashError", "AlumnoYaMatriculado");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
+                } catch (ErrorTransaccionException e) {
+                    // Fallo real de base de datos (no "sin vacantes"): ya no se confunde
+                    // con GradoSinVacantes. dashboard_padre.jsp ya contempla este mensaje.
+                    System.err.println("[MatriculaServlet] " + e.getMessage());
+                    session.setAttribute("flashError", "ErrorTransaccion");
+                    response.sendRedirect(request.getContextPath() + "/dashboard");
+                    return;
                 }
 
                 if (seccionAsignada != null) {
+                    // 5-A. Flash attribute de éxito
                     session.setAttribute("flashMsg", "ReservaExitosa");
                 } else {
+                    // 5-B. Las secciones A, B y C del grado están completas (32/32 cada una)
                     session.setAttribute("flashError", "GradoSinVacantes");
                 }
 
                 response.sendRedirect(request.getContextPath() + "/dashboard");
-                
+
             } catch (NumberFormatException e) {
                 System.err.println("[MatriculaServlet] idAlumno inválido: " + e.getMessage());
                 session.setAttribute("flashError", "ErrorInterno");

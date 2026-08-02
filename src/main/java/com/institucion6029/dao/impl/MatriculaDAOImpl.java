@@ -12,12 +12,13 @@ import com.institucion6029.utility.Conexion;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
+import com.institucion6029.exception.ErrorTransaccionException;
 
 public class MatriculaDAOImpl implements MatriculaDAO {
 
 	@Override
 	public Seccion registrarReservaConControlDeCupo(ReservaMatricula reserva, String grado) 
-	        throws ReservaDuplicadaException, PeriodoMatriculaCerradoException {
+	        throws ReservaDuplicadaException, PeriodoMatriculaCerradoException, ErrorTransaccionException {
 
 	    String sqlPeriodo = "SELECT CASE "
 	                       + "  WHEN CURDATE() BETWEEN fecha_inicio_preferencial AND fecha_fin_preferencial THEN 'Preferencial' "
@@ -129,13 +130,19 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	    } catch (ReservaDuplicadaException | PeriodoMatriculaCerradoException e) {
 	        throw e; // se re-lanzan tal cual para que el Servlet distinga cada caso
 	    } catch (SQLException e) {
+	        // Error real de base de datos (ej. condición de carrera que dispara el
+	        // UNIQUE KEY uq_reserva_activa_por_alumno_ano, lock-timeout, caída de
+	        // conexión). NO es lo mismo que "sin vacantes": se relanza como
+	        // ErrorTransaccionException para que el Servlet no confunda ambos casos.
 	        System.err.println("[MatriculaDAOImpl] Error en transacción de reserva con control de cupo: " + e.getMessage());
 	        if (con != null) {
 	            try { con.rollback(); } catch (SQLException ex) {
 	                System.err.println("[MatriculaDAOImpl] Error al hacer rollback: " + ex.getMessage());
 	            }
 	        }
-	        return null;
+	        throw new ErrorTransaccionException(
+	            "Fallo de base de datos al procesar la reserva de matrícula para idAlumno="
+	            + reserva.getIdAlumno() + ": " + e.getMessage(), e);
 	    } finally {
 	        if (con != null) {
 	            try {
@@ -208,4 +215,3 @@ public class MatriculaDAOImpl implements MatriculaDAO {
         }
     }
 }
-
