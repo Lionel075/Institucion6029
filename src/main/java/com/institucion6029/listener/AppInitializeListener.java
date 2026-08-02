@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 // SE CAMBIÓ REQUISITO DE javax A jakarta PARA COMPATIBILIDAD CON TOMCAT 11
 import jakarta.servlet.ServletContext;
@@ -13,9 +16,13 @@ import jakarta.servlet.annotation.WebListener;
 
 import com.institucion6029.model.InstitucionWeb;
 import com.institucion6029.utility.Conexion;
+import com.institucion6029.factory.DAOFactory;
 
 @WebListener
 public class AppInitializeListener implements ServletContextListener {
+
+    // Un solo hilo demonio: la tarea es breve y corre en background sin bloquear el shutdown de Tomcat.
+    private ScheduledExecutorService expiradorReservas;
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
@@ -31,11 +38,33 @@ public class AppInitializeListener implements ServletContextListener {
         } else {
             System.err.println("[6029-Listener] CRÍTICO: No se pudieron precargar los datos del colegio.");
         }
+
+        // Corrección [Fallo Crítico #3]: antes ninguna reserva 'Pendiente' liberaba
+        // su vacante. Cada 15 min se expira lo que superó las 48h anunciadas en
+        // reserva.jsp y se libera el cupo en sch_secciones (ver MatriculaDAOImpl.expirarReservasVencidas()).
+        expiradorReservas = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "expirador-reservas-matricula");
+            t.setDaemon(true);
+            return t;
+        });
+        expiradorReservas.scheduleAtFixedRate(() -> {
+            try {
+                DAOFactory.getMatriculaDAO().expirarReservasVencidas();
+                // Transición Preferencial → General: cancela ('Expirada') lo que
+                // siga Pendiente 48h después del cierre del periodo preferencial.
+                DAOFactory.getMatriculaDAO().expirarReservasPreferencialesVencidas();
+            } catch (Exception e) {
+                System.err.println("[6029-Listener] Error al ejecutar expirador de reservas: " + e.getMessage());
+            }
+        }, 1, 15, TimeUnit.MINUTES);
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         System.out.println("[6029-Listener] Apagando el servidor web y liberando recursos globales.");
+        if (expiradorReservas != null) {
+            expiradorReservas.shutdown();
+        }
     }
 
     /**

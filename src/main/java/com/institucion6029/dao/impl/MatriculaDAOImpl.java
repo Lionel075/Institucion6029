@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.institucion6029.dao.MatriculaDAO;
 import com.institucion6029.model.ReservaMatricula;
@@ -214,4 +216,173 @@ public class MatriculaDAOImpl implements MatriculaDAO {
             return false;
         }
     }
+
+    @Override
+    public int expirarReservasVencidas() {
+        // Bloquea las filas candidatas para que dos ejecuciones del scheduler
+        // (o el scheduler + un registro manual) no procesen la misma reserva dos veces.
+        String sqlBuscarVencidas = "SELECT id_reserva, id_seccion FROM mat_reservas_matricula "
+                                  + "WHERE estado_reserva = 'Pendiente' "
+                                  + "AND fecha_hora_reserva < (NOW() - INTERVAL 48 HOUR) "
+                                  + "FOR UPDATE";
+
+        String sqlExpirarReserva = "UPDATE mat_reservas_matricula SET estado_reserva = 'Expirada' WHERE id_reserva = ?";
+
+        String sqlLiberarVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
+                                  + "WHERE id_seccion = ? AND vacantes_disponibles < 32";
+
+        Connection con = null;
+        int totalExpiradas = 0;
+
+        try {
+            con = Conexion.obtenerConexion();
+            con.setAutoCommit(false);
+
+            List<int[]> vencidas = new ArrayList<>(); // {id_reserva, id_seccion}
+            try (PreparedStatement pstmtBuscar = con.prepareStatement(sqlBuscarVencidas);
+                 ResultSet rs = pstmtBuscar.executeQuery()) {
+                while (rs.next()) {
+                    vencidas.add(new int[]{ rs.getInt("id_reserva"), rs.getInt("id_seccion") });
+                }
+            }
+
+            for (int[] datos : vencidas) {
+                try (PreparedStatement pstmtExpirar = con.prepareStatement(sqlExpirarReserva)) {
+                    pstmtExpirar.setInt(1, datos[0]);
+                    pstmtExpirar.executeUpdate();
+                }
+                try (PreparedStatement pstmtLiberar = con.prepareStatement(sqlLiberarVacante)) {
+                    pstmtLiberar.setInt(1, datos[1]);
+                    pstmtLiberar.executeUpdate();
+                }
+            }
+
+            con.commit();
+            totalExpiradas = vencidas.size();
+
+            if (totalExpiradas > 0) {
+                System.out.println("[MatriculaDAOImpl] " + totalExpiradas
+                        + " reserva(s) expirada(s) por vencimiento de 48 horas; vacantes liberadas.");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[MatriculaDAOImpl] Error al expirar reservas vencidas: " + e.getMessage());
+            if (con != null) {
+                try { con.rollback(); } catch (SQLException ex) {
+                    System.err.println("[MatriculaDAOImpl] Error al hacer rollback de expiración: " + ex.getMessage());
+                }
+            }
+        } finally {
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    System.err.println("[MatriculaDAOImpl] Error al cerrar conexión de expiración: " + e.getMessage());
+                }
+            }
+        }
+
+        return totalExpiradas;
+    }
+
+    @Override
+    public int expirarReservasPreferencialesVencidas() {
+        // Candidatas: Preferencial + Pendiente cuyo periodo preferencial cerró
+        // hace más de 48h (la "ventana de gracia" antes de abrir Generales).
+        String sqlBuscarCandidatas =
+              "SELECT r.id_reserva, r.id_seccion, r.id_alumno, r.id_ano "
+            + "FROM mat_reservas_matricula r "
+            + "JOIN cfg_anos_escolares a ON r.id_ano = a.id_ano "
+            + "WHERE r.tipo_reserva = 'Preferencial' "
+            + "AND r.estado_reserva = 'Pendiente' "
+            + "AND NOW() > (a.fecha_fin_preferencial + INTERVAL 48 HOUR)";
+
+        // UPDATE condicional (WHERE estado_reserva = 'Pendiente'): si otra ejecución
+        // ya la procesó, executeUpdate() devuelve 0 y se omite, evitando doble
+        // liberación de vacante o doble registro en bitácora.
+        String sqlExpirarSiSigueSiendoPendiente =
+              "UPDATE mat_reservas_matricula SET estado_reserva = 'Expirada' "
+            + "WHERE id_reserva = ? AND estado_reserva = 'Pendiente'";
+
+        String sqlLiberarVacante =
+              "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
+            + "WHERE id_seccion = ? AND vacantes_disponibles < 32";
+
+        // Se omiten motivo y fecha_cancelacion: toman el DEFAULT de la columna
+        // (el texto de las "doble advertencias") y CURRENT_TIMESTAMP respectivamente.
+        String sqlRegistrarBitacora =
+              "INSERT INTO mat_bitacora_cancelaciones_preferencia (id_alumno, id_ano) VALUES (?, ?)";
+
+        Connection con = null;
+        int totalExpiradas = 0;
+
+        try {
+            con = Conexion.obtenerConexion();
+            con.setAutoCommit(false);
+
+            List<int[]> candidatas = new ArrayList<>(); // {id_reserva, id_seccion, id_alumno, id_ano}
+            try (PreparedStatement pstmtBuscar = con.prepareStatement(sqlBuscarCandidatas);
+                 ResultSet rs = pstmtBuscar.executeQuery()) {
+                while (rs.next()) {
+                    candidatas.add(new int[]{
+                        rs.getInt("id_reserva"), rs.getInt("id_seccion"),
+                        rs.getInt("id_alumno"), rs.getInt("id_ano")
+                    });
+                }
+            }
+
+            for (int[] datos : candidatas) {
+                int idReserva = datos[0], idSeccion = datos[1], idAlumno = datos[2], idAno = datos[3];
+
+                try (PreparedStatement pstmtExpirar = con.prepareStatement(sqlExpirarSiSigueSiendoPendiente)) {
+                    pstmtExpirar.setInt(1, idReserva);
+                    if (pstmtExpirar.executeUpdate() == 0) {
+                        continue; // ya fue procesada por otra ejecución
+                    }
+                }
+
+                try (PreparedStatement pstmtLiberar = con.prepareStatement(sqlLiberarVacante)) {
+                    pstmtLiberar.setInt(1, idSeccion);
+                    pstmtLiberar.executeUpdate();
+                }
+
+                try (PreparedStatement pstmtBitacora = con.prepareStatement(sqlRegistrarBitacora)) {
+                    pstmtBitacora.setInt(1, idAlumno);
+                    pstmtBitacora.setInt(2, idAno);
+                    pstmtBitacora.executeUpdate();
+                }
+
+                totalExpiradas++;
+            }
+
+            con.commit();
+
+            if (totalExpiradas > 0) {
+                System.out.println("[MatriculaDAOImpl] " + totalExpiradas
+                        + " reserva(s) Preferencial(es) expirada(s) tras las 48h de gracia; "
+                        + "vacantes liberadas y bitácora registrada.");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[MatriculaDAOImpl] Error al expirar reservas preferenciales vencidas: " + e.getMessage());
+            if (con != null) {
+                try { con.rollback(); } catch (SQLException ex) {
+                    System.err.println("[MatriculaDAOImpl] Error al hacer rollback de expiración preferencial: " + ex.getMessage());
+                }
+            }
+        } finally {
+            if (con != null) {
+                try {
+                    con.setAutoCommit(true);
+                    con.close();
+                } catch (SQLException e) {
+                    System.err.println("[MatriculaDAOImpl] Error al cerrar conexión de expiración preferencial: " + e.getMessage());
+                }
+            }
+        }
+
+        return totalExpiradas;
+    }
 }
+
