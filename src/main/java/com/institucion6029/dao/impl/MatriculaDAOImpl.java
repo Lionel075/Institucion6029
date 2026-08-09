@@ -13,8 +13,13 @@ import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
 import com.institucion6029.exception.ErrorTransaccionException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class MatriculaDAOImpl implements MatriculaDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(MatriculaDAOImpl.class);
+	
 	@Override
 	public Seccion registrarReservaConControlDeCupo(ReservaMatricula reserva, String grado) 
 	        throws ReservaDuplicadaException, PeriodoMatriculaCerradoException, ErrorTransaccionException {
@@ -124,10 +129,10 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	    } catch (ReservaDuplicadaException | PeriodoMatriculaCerradoException e) {
 	        throw e;
 	    } catch (SQLException e) {
-	        System.err.println("[MatriculaDAOImpl] Error en transacción de reserva con control de cupo: " + e.getMessage());
+	    	LOG.error("Error en transacción de reserva con control de cupo. idAlumno={}", reserva.getIdAlumno(), e);
 	        if (con != null) {
 	            try { con.rollback(); } catch (SQLException ex) {
-	                System.err.println("[MatriculaDAOImpl] Error al hacer rollback: " + ex.getMessage());
+	            	LOG.error("Error al hacer rollback de la reserva", ex);
 	            }
 	        }
 	        throw new ErrorTransaccionException(
@@ -139,7 +144,7 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                con.setAutoCommit(true);
 	                con.close();
 	            } catch (SQLException e) {
-	                System.err.println("[MatriculaDAOImpl] Error al cerrar conexión: " + e.getMessage());
+	            	LOG.error("Error al cerrar conexión tras registrar reserva", e);
 	            }
 	        }
 	    }

@@ -10,8 +10,13 @@ import com.institucion6029.model.Usuario;
 import com.institucion6029.utility.Conexion;
 import com.institucion6029.utility.PasswordUtil;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class UsuarioDAOImpl implements UsuarioDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(UsuarioDAOImpl.class);
+	
     @Override
     public Usuario validarAcceso(String usuario, String clave) {
         Usuario user = null;
@@ -61,7 +66,7 @@ public class UsuarioDAOImpl implements UsuarioDAO {
             return user;
 
         } catch (SQLException e) {
-            System.err.println("[UsuarioDAOImpl] Error en autenticación relacional: " + e.getMessage());
+        	LOG.error("Error en autenticación relacional", e);
             return null;
         }
     }

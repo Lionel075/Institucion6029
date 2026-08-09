@@ -11,9 +11,13 @@ import java.io.IOException;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
     
+	private static final Logger LOG = LoggerFactory.getLogger(LoginServlet.class);
     private static final long serialVersionUID = 1L;
 
     /**
@@ -55,7 +59,7 @@ public class LoginServlet extends HttpServlet {
                 
                 session.setAttribute("usuario", usuarioAutenticado);
                 
-                System.out.println("[6029-Login] Sesión iniciada con éxito para el ID: " + usuarioAutenticado.getIdUsuario());
+                LOG.info("Sesión iniciada con éxito para el ID: {}", usuarioAutenticado.getIdUsuario());
                 
                 // 3. Redirección centralizada al Dashboard general (este ya distribuye internamente por ID de rol)
                 response.sendRedirect(request.getContextPath() + "/dashboard");
@@ -67,7 +71,7 @@ public class LoginServlet extends HttpServlet {
             }
             
         } catch (Exception e) {
-            System.err.println("[LoginServlet] Error crítico en el proceso de login: " + e.getMessage());
+        	LOG.error("Error crítico en el proceso de login", e);
             response.sendRedirect(request.getContextPath() + "/login.jsp?error=ErrorInterno");
         }
     }

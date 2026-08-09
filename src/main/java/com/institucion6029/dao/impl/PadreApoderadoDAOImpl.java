@@ -5,12 +5,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.institucion6029.dao.PadreApoderadoDAO;
 import com.institucion6029.model.PadreApoderado;
 import com.institucion6029.utility.Conexion;
 
 public class PadreApoderadoDAOImpl implements PadreApoderadoDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(PadreApoderadoDAOImpl.class);
+	
     @Override
     public PadreApoderado obtenerPorIdUsuario(String idUsuario) {
         PadreApoderado apoderado = null;
@@ -34,7 +39,7 @@ public class PadreApoderadoDAOImpl implements PadreApoderadoDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[PadreApoderadoDAOImpl] Error al obtener apoderado por id_usuario: " + e.getMessage());
+        	LOG.error("Error al obtener apoderado por id_usuario: ", e);
         }
         return apoderado;
     }

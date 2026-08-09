@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.institucion6029.dao.RendimientoDAO;
 import com.institucion6029.model.CompetenciaLogro;
 import com.institucion6029.model.CuadroHonorAnual;
@@ -15,6 +18,8 @@ import com.institucion6029.utility.Conexion;
 
 public class RendimientoDAOImpl implements RendimientoDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(RendimientoDAOImpl.class);
+	
     @Override
     public boolean registrarLogroCompetencia(CompetenciaLogro logro) {
         // Dejamos que puntaje_calculado reciba 0 porque el Trigger de la BD lo pisará con la matemática real
@@ -32,7 +37,7 @@ public class RendimientoDAOImpl implements RendimientoDAO {
             
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("[RendimientoDAOImpl] Error al registrar logro: " + e.getMessage());
+        	LOG.error("Error al registrar logro: ", e);
             return false;
         }
     }
@@ -51,7 +56,7 @@ public class RendimientoDAOImpl implements RendimientoDAO {
             
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("[RendimientoDAOImpl] Error al programar examen de Navidad: " + e.getMessage());
+        	LOG.error("Error al programar examen de Navidad: ", e);
             return false;
         }
     }
@@ -68,7 +73,7 @@ public class RendimientoDAOImpl implements RendimientoDAO {
             
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("[RendimientoDAOImpl] Error al registrar nota de Navidad: " + e.getMessage());
+        	LOG.error("Error al registrar nota de Navidad: ", e);
             return false;
         }
     }

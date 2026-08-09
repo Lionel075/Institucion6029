@@ -9,7 +9,12 @@ import com.institucion6029.dao.AnioEscolarDAO;
 import com.institucion6029.model.AnioEscolar;
 import com.institucion6029.utility.Conexion;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AnioEscolarDAOImpl implements AnioEscolarDAO {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(AnioEscolarDAOImpl.class);
 
     @Override
     public AnioEscolar obtenerAnioActivo() {
@@ -36,7 +41,7 @@ public class AnioEscolarDAOImpl implements AnioEscolarDAO {
                 anio.setEstadoAnio(rs.getString("estado_ano"));
             }
         } catch (SQLException e) {
-            System.err.println("[AnioEscolarDAOImpl] Error al obtener el año escolar activo: " + e.getMessage());
+        	LOG.error("Error al obtener el año escolar activo", e);
         }
         return anio;
     }

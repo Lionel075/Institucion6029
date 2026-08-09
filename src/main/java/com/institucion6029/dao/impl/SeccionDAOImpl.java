@@ -5,12 +5,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.institucion6029.dao.SeccionDAO;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.utility.Conexion;
 
 public class SeccionDAOImpl implements SeccionDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(SeccionDAOImpl.class);
+	
     @Override
     public int obtenerVacantesDisponiblesPorGrado(String grado, int idAno) {
         int totalVacantes = 0;
@@ -28,7 +33,7 @@ public class SeccionDAOImpl implements SeccionDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[SeccionDAOImpl] Error al obtener vacantes por grado: " + e.getMessage());
+        	LOG.error("Error al obtener vacantes por grado: ", e);
         }
         return totalVacantes;
     }
@@ -59,7 +64,7 @@ public class SeccionDAOImpl implements SeccionDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[SeccionDAOImpl] Error al buscar sección disponible: " + e.getMessage());
+        	LOG.error("Error al buscar sección disponible: ", e);
         }
         return seccion;
     }
@@ -79,7 +84,7 @@ public class SeccionDAOImpl implements SeccionDAO {
             return pstmt.executeUpdate() > 0;
             
         } catch (SQLException e) {
-            System.err.println("[SeccionDAOImpl] Error al modificar contador de vacantes: " + e.getMessage());
+        	LOG.error("Error al modificar contador de vacantes: ", e);
             return false;
         }
     }

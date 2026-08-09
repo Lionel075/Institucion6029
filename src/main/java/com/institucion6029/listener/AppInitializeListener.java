@@ -14,12 +14,17 @@ import jakarta.servlet.annotation.WebListener;
 import com.institucion6029.model.InstitucionWeb;
 import com.institucion6029.utility.Conexion;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebListener
 public class AppInitializeListener implements ServletContextListener {
 
+	private static final Logger LOG = LoggerFactory.getLogger(AppInitializeListener.class);
+	
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        System.out.println("[6029-Listener] Iniciando el servidor web e instalando configuraciones globales...");
+    	LOG.info("Iniciando el servidor web e instalando configuraciones globales...");
         
         ServletContext servletContext = sce.getServletContext();
         InstitucionWeb datosColegio = cargarDatosInstitucion();
@@ -27,15 +32,15 @@ public class AppInitializeListener implements ServletContextListener {
         if (datosColegio != null) {
             // Guardamos el objeto en el ámbito global de la aplicación web (Tomcat Context Cache)
             servletContext.setAttribute("DATOS_COLEGIO", datosColegio);
-            System.out.println("[6029-Listener] Datos de la institución cargados en caché web con éxito.");
+            LOG.info("Datos de la institución cargados en caché web con éxito.");
         } else {
-            System.err.println("[6029-Listener] CRÍTICO: No se pudieron precargar los datos del colegio.");
+        	LOG.error("CRÍTICO: No se pudieron precargar los datos del colegio.");
         }
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        System.out.println("[6029-Listener] Apagando el servidor web y liberando recursos globales.");
+    	LOG.info("Apagando el servidor web y liberando recursos globales.");
     }
 
     /**
@@ -65,9 +70,9 @@ public class AppInitializeListener implements ServletContextListener {
                 institucion.setModalidad(rs.getString("modalidad"));
             }
         } catch (SQLException e) {
-            System.err.println("[6029-Listener] Error SQL al precargar la institución: " + e.getMessage());
+        	LOG.error("Error SQL al precargar la institución", e);
         } catch (Exception e) {
-            System.err.println("[6029-Listener] Error general en Listener: " + e.getMessage());
+        	LOG.error("Error general en Listener", e);
         }
         return institucion;
     }

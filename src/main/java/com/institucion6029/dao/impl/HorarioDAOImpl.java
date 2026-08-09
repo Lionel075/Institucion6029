@@ -7,11 +7,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.institucion6029.dao.HorarioDAO;
 import com.institucion6029.model.HorarioClase;
 import com.institucion6029.utility.Conexion;
 
 public class HorarioDAOImpl implements HorarioDAO {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(HorarioDAOImpl.class);
 
     @Override
     public List<HorarioClase> obtenerHorarioPorSeccion(int idSeccion) {
@@ -42,7 +47,7 @@ public class HorarioDAOImpl implements HorarioDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[HorarioDAOImpl] Error al obtener el horario de la sección: " + e.getMessage());
+        	LOG.error("Error al obtener el horario de la sección: ", e);
         }
         return listaHorario;
     }

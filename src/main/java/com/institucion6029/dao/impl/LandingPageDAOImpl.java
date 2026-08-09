@@ -5,12 +5,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.institucion6029.dao.LandingPageDAO;
 import com.institucion6029.model.InstitucionWeb;
 import com.institucion6029.utility.Conexion;
 
 public class LandingPageDAOImpl implements LandingPageDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(LandingPageDAOImpl.class);
+	
     @Override
     public InstitucionWeb obtenerDatosInstitucion() {
         InstitucionWeb institucion = null;
@@ -38,7 +43,7 @@ public class LandingPageDAOImpl implements LandingPageDAO {
             }
             
         } catch (SQLException e) {
-            System.err.println("[LandingPageDAOImpl] Error SQL al recuperar los datos del colegio: " + e.getMessage());
+        	LOG.error("Error SQL al recuperar los datos del colegio: ", e);
         }
         
         return institucion;

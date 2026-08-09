@@ -20,9 +20,13 @@ import com.institucion6029.model.Docente;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.utility.ConfiguracionAcademica;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebServlet("/asistencia/docente")
 public class AsistenciaServlet extends HttpServlet {
     
+	private static final Logger LOG = LoggerFactory.getLogger(AsistenciaServlet.class);
     private static final long serialVersionUID = 1L;
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -36,8 +40,7 @@ public class AsistenciaServlet extends HttpServlet {
 
         Usuario user = (Usuario) session.getAttribute("usuario");
         
-        System.out.println("[6029-Asistencia] Verificando acceso para el ID: " 
-                + user.getIdUsuario() + " con ID de Rol: " + user.getIdRol());
+        LOG.info("Verificando acceso para el ID: {} con ID de Rol: {}", user.getIdUsuario(), user.getIdRol());
         
         if (user.getIdRol() != 2) { // 2 = DOCENTE
             response.sendRedirect(request.getContextPath() + "/login.jsp?error=RolDocenteInvalido");
@@ -91,7 +94,7 @@ public class AsistenciaServlet extends HttpServlet {
             	response.sendRedirect(request.getContextPath() + "/login.jsp?error=FichaDocenteNoEncontrada");
             }
         } catch (Exception e) {
-            System.err.println("[AsistenciaServlet] Error al cargar panel de asistencia: " + e.getMessage());
+        	LOG.error("Error al cargar panel de asistencia. idUsuarioDocente={}", idUsuarioDocente, e);
             response.sendRedirect(request.getContextPath() + "/dashboard?error=ErrorInterno");
         }
     }
@@ -149,7 +152,7 @@ public class AsistenciaServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/docente/asistencia?error=SinAlumnos");
             }
         } catch (Exception e) {
-            System.err.println("[AsistenciaServlet] Error procesando lote de asistencia: " + e.getMessage());
+        	LOG.error("Error procesando lote de asistencia", e);
             response.sendRedirect(request.getContextPath() + "/docente/asistencia?error=DatosInvalidos");
         }
     }

@@ -19,9 +19,13 @@ import com.institucion6029.exception.ErrorTransaccionException;
 import com.institucion6029.utility.ConfiguracionAcademica;
 import com.institucion6029.utility.GradosAcademicos;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebServlet("/matricula")
 public class MatriculaServlet extends HttpServlet {
     
+	private static final Logger LOG = LoggerFactory.getLogger(MatriculaServlet.class);
     private static final long serialVersionUID = 1L;
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -105,16 +109,15 @@ public class MatriculaServlet extends HttpServlet {
                 Alumno alumno = DAOFactory.getAlumnoDAO().buscarPorId(idAlumno);
 
                 if (alumno == null || !alumno.getIdPadre().equals(user.getIdUsuario())) {
-                    System.err.println("[MatriculaServlet] Intento de matrícula no autorizado. "
-                            + "Usuario: " + user.getIdUsuario() + " intentó reservar idAlumno=" + idAlumno);
+                	LOG.warn("Intento de matrícula no autorizado. Usuario: {} intentó reservar idAlumno={}",
+                	        user.getIdUsuario(), idAlumno);
                     session.setAttribute("flashError", "NoAutorizadoAlumno");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
                 }
                 
                 if ("Retirado".equals(alumno.getEstadoAcademico())) {
-                    System.err.println("[MatriculaServlet] Intento de matrícula sobre alumno Retirado. "
-                            + "idAlumno=" + idAlumno);
+                	LOG.warn("Intento de matrícula sobre alumno Retirado. idAlumno={}", idAlumno);
                     session.setAttribute("flashError", "AlumnoRetirado");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
@@ -133,17 +136,17 @@ public class MatriculaServlet extends HttpServlet {
                     seccionAsignada = DAOFactory.getMatriculaDAO()
                             .registrarReservaConControlDeCupo(reserva, grado);
                 } catch (PeriodoMatriculaCerradoException e) {
-                    System.err.println("[MatriculaServlet] " + e.getMessage());
+                	LOG.warn("Reserva rechazada por regla de negocio: {}", e.getMessage());
                     session.setAttribute("flashError", "PeriodoMatriculaCerrado");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
                 } catch (ReservaDuplicadaException e) {
-                    System.err.println("[MatriculaServlet] " + e.getMessage());
+                	LOG.warn("Reserva rechazada por regla de negocio: {}", e.getMessage());
                     session.setAttribute("flashError", "AlumnoYaMatriculado");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
                 } catch (ErrorTransaccionException e) {
-                    System.err.println("[MatriculaServlet] " + e.getMessage());
+                	LOG.warn("Reserva rechazada por regla de negocio: {}", e.getMessage());
                     session.setAttribute("flashError", "ErrorTransaccion");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
@@ -158,11 +161,11 @@ public class MatriculaServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/dashboard");
 
             } catch (NumberFormatException e) {
-                System.err.println("[MatriculaServlet] idAlumno inválido: " + e.getMessage());
+            	LOG.warn("idAlumno inválido recibido en el formulario: {}", idAlumnoParam);
                 session.setAttribute("flashError", "ErrorInterno");
                 response.sendRedirect(request.getContextPath() + "/dashboard");
             } catch (Exception e) {
-                System.err.println("[MatriculaServlet] Error en proceso de reserva: " + e.getMessage());
+            	LOG.error("Error inesperado en proceso de reserva", e);
                 session.setAttribute("flashError", "ErrorInterno");
                 response.sendRedirect(request.getContextPath() + "/dashboard");
             }
@@ -171,8 +174,7 @@ public class MatriculaServlet extends HttpServlet {
             // 6. NUEVO: rama por defecto. Antes, cualquier "accion" distinto de "reservar"
             // (nulo, vacío, o un valor manipulado en el campo hidden del formulario)
             // dejaba el método sin sendRedirect ni forward -> respuesta vacía silenciosa.
-            System.err.println("[MatriculaServlet] Acción no reconocida en /matricula: '" + accion
-                    + "' — usuario: " + user.getIdUsuario());
+        	LOG.warn("Acción no reconocida en /matricula: '{}' — usuario: {}", accion, user.getIdUsuario());
             session.setAttribute("flashError", "ErrorInterno");
             response.sendRedirect(request.getContextPath() + "/dashboard");
         }

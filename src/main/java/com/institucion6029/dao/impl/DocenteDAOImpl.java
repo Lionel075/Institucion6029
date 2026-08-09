@@ -10,8 +10,13 @@ import com.institucion6029.model.Docente;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.utility.Conexion;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class DocenteDAOImpl implements DocenteDAO {
 
+	private static final Logger LOG = LoggerFactory.getLogger(DocenteDAOImpl.class);
+	
     @Override
     public Docente obtenerPorIdUsuario(String idUsuario) {
         Docente docente = null;
@@ -66,7 +71,7 @@ public class DocenteDAOImpl implements DocenteDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[DocenteDAOImpl] Error al obtener sección tutorada: " + e.getMessage());
+        	LOG.error("Error al obtener sección tutorada: ", e);
         }
         return seccion;
     }
