@@ -16,6 +16,7 @@ import com.institucion6029.model.Alumno;
 import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
 import com.institucion6029.exception.ErrorTransaccionException;
+import com.institucion6029.utility.ConfiguracionAcademica;
 
 @WebServlet("/matricula")
 public class MatriculaServlet extends HttpServlet {
@@ -59,18 +60,22 @@ public class MatriculaServlet extends HttpServlet {
         String accion = request.getParameter("accion");
 
         if ("reservar".equals(accion)) {
-
-            // ⚠ CONSTANTE ÚNICA: ajusta este valor si tu id_ano real en sch_secciones
-            // es distinto. DashboardServlet usa 2027; aquí se dejó igual para mantener
-            // consistencia hasta que confirmes.
-            final int ANIO_OPERATIVO = 2;
-
-            // 1. Captura y validación de parámetros: nulos o vacíos no evalúan aforo
-            String idAlumnoParam = request.getParameter("idAlumno");
+        	
+        	String idAlumnoParam = request.getParameter("idAlumno");
             String grado = request.getParameter("grado");
 
             if (idAlumnoParam == null || idAlumnoParam.trim().isEmpty()
                     || grado == null || grado.trim().isEmpty()) {
+                response.sendRedirect(request.getContextPath() + "/dashboard");
+                return;
+            }
+        	
+        	final int anioOperativo;
+            try {
+                anioOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
+            } catch (IllegalStateException e) {
+                System.err.println("[MatriculaServlet] " + e.getMessage());
+                session.setAttribute("flashError", "PeriodoMatriculaCerrado");
                 response.sendRedirect(request.getContextPath() + "/dashboard");
                 return;
             }
@@ -101,7 +106,7 @@ public class MatriculaServlet extends HttpServlet {
                 // 3. Arma el objeto de reserva (sin id_seccion aún: lo asigna la transacción)
                 ReservaMatricula reserva = new ReservaMatricula();
                 reserva.setIdAlumno(idAlumno);
-                reserva.setIdAnio(ANIO_OPERATIVO);
+                reserva.setIdAnio(anioOperativo);
                 reserva.setEstadoReserva("Pendiente");
 
                 // 4. Búsqueda de sección + inserción de reserva + descuento de vacante,

@@ -18,6 +18,7 @@ import com.institucion6029.model.Alumno;
 import com.institucion6029.model.AsistenciaDiaria;
 import com.institucion6029.model.Docente;
 import com.institucion6029.model.Seccion;
+import com.institucion6029.utility.ConfiguracionAcademica;
 
 @WebServlet("/asistencia/docente")
 public class AsistenciaServlet extends HttpServlet {
@@ -44,7 +45,15 @@ public class AsistenciaServlet extends HttpServlet {
         }
 
         String idUsuarioDocente = user.getIdUsuario(); // Recupera el código alfanumérico (ej: DOC-00010)
-        int anoOperativo = 2; // Año operativo activo configurado por regla de negocio
+        
+        int anoOperativo;
+        try {
+            anoOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
+        } catch (IllegalStateException e) {
+            System.err.println("[AsistenciaServlet] " + e.getMessage());
+            response.sendRedirect(request.getContextPath() + "/login.jsp?error=SinAnioActivo");
+            return;
+        }
         
         try {
             // 1. CORRECCIÓN SINTAXIS: Usar tu método real para traer los datos del docente

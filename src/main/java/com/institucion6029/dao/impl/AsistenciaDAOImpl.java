@@ -21,7 +21,7 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
         String sql = "SELECT a.id_alumno, a.nombres, a.apellidos "
                    + "FROM mtr_alumnos a "
                    + "INNER JOIN sch_secciones_alumnos sa ON a.id_alumno = sa.id_alumno "
-                   + "WHERE sa.id_seccion = ? AND sa.ano_escolar = 2027 "
+                   + "WHERE sa.id_seccion = ? AND sa.ano_escolar = 2 "
                    + "ORDER BY a.apellidos, a.nombres ASC";
 
         try (Connection con = Conexion.obtenerConexion();

@@ -69,7 +69,16 @@ public class DAOFactory {
         }
         return matriculaDAO;
     }
+    
+    private static AnioEscolarDAO anioEscolarDAO;
 
+    public static synchronized AnioEscolarDAO getAnioEscolarDAO() {
+        if (anioEscolarDAO == null) {
+            anioEscolarDAO = new AnioEscolarDAOImpl();
+        }
+        return anioEscolarDAO;
+    }
+    
     public static synchronized AsistenciaDAO getAsistenciaDAO() {
         if (asistenciaDAO == null) {
             asistenciaDAO = new AsistenciaDAOImpl();

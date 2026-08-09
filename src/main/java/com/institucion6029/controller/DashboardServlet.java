@@ -15,6 +15,7 @@ import java.util.Map;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
 import com.institucion6029.model.Alumno;
+import com.institucion6029.utility.ConfiguracionAcademica;
 
 @WebServlet("/dashboard")
 public class DashboardServlet extends HttpServlet {
@@ -41,19 +42,38 @@ public class DashboardServlet extends HttpServlet {
         // El control de flujos corporativo sincronizado con la base de datos
         if (user.getIdRol() == 1) { // 1 = PADRE / APODERADO
             String idPadre = user.getIdUsuario();
-            
+
             List<Alumno> hijos = DAOFactory.getAlumnoDAO().listarHijosPorPadre(idPadre);
             request.setAttribute("listaHijos", hijos);
-            
+
+            // Resolución centralizada del año operativo activo (antes: literal "2" hardcodeado).
+            // Si no hay ningún año escolar en estado 'Activo', se degrada con vacantes=0 en vez
+            // de romper el dashboard completo del padre.
+            int anioOperativo;
+            try {
+                anioOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
+            } catch (IllegalStateException e) {
+                System.err.println("[DashboardServlet] " + e.getMessage());
+                anioOperativo = -1;
+            }
+
             Map<String, Integer> vacantesPorGrado = new HashMap<>();
             String[] grados = {"1° Primaria", "2° Primaria", "3° Primaria", "4° Primaria", "5° Primaria", "6° Primaria"};
-            
+
             for (String g : grados) {
-                int vacantes = DAOFactory.getSeccionDAO().obtenerVacantesDisponiblesPorGrado(g, 2);
+                int vacantes = (anioOperativo == -1) ? 0
+                        : DAOFactory.getSeccionDAO().obtenerVacantesDisponiblesPorGrado(g, anioOperativo);
                 vacantesPorGrado.put(g, vacantes);
             }
             request.setAttribute("vacantesGrados", vacantesPorGrado);
-            
+
+            // Si no hay año activo, el padre lo ve reflejado como "todo en 0" — opcional:
+            // podrías añadir un flashError distinto aquí para mostrar un aviso explícito
+            // en vez de dejar que lo infiera de vacantes=0 en todos los grados.
+            if (anioOperativo == -1) {
+                request.setAttribute("sinAnioActivo", true);
+            }
+
             // --- Flash attributes ---
             if (session.getAttribute("flashMsg") != null) {
                 request.setAttribute("flashMsg", session.getAttribute("flashMsg"));
@@ -63,7 +83,7 @@ public class DashboardServlet extends HttpServlet {
                 request.setAttribute("flashError", session.getAttribute("flashError"));
                 session.removeAttribute("flashError");
             }
-            
+
             request.getRequestDispatcher("/WEB-INF/views/dashboard_padre.jsp").forward(request, response);
             return;
             
