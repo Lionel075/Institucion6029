@@ -59,19 +59,17 @@ public class AsistenciaServlet extends HttpServlet {
         }
         
         try {
-            // 1. CORRECCIÓN SINTAXIS: Usar tu método real para traer los datos del docente
             Docente docenteInfo = DAOFactory.getDocenteDAO().obtenerPorIdUsuario(idUsuarioDocente);
             
             if (docenteInfo != null) {
                 request.setAttribute("docente", docenteInfo);
                 
-                // 2. CORRECCIÓN SINTAXIS: Usar tu método real para traer la sección asignada en 2027
                 Seccion seccionTutorada = DAOFactory.getDocenteDAO().obtenerSeccionTutorada(idUsuarioDocente, anoOperativo);
                 
                 if (seccionTutorada != null) {
                     request.setAttribute("seccion", seccionTutorada);
                     
-                    // 3. Regla corporativa de Turnos Académicos basados en el grado de tu objeto Seccion
+                    //Regla corporativa de Turnos Académicos basados en el grado de tu objeto Seccion
                     String grado = seccionTutorada.getGrado(); // Ej: "1° Primaria"
                     String turno = "Mañana";
                     if (grado.contains("4°") || grado.contains("5°") || grado.contains("6°")) {
@@ -79,7 +77,7 @@ public class AsistenciaServlet extends HttpServlet {
                     }
                     request.setAttribute("turnoAcademico", turno);
 
-                    // 4. Cargar alumnos de esa sección específica
+                    //Cargar alumnos de esa sección específica
                     List<Alumno> alumnosSeccion = DAOFactory.getAsistenciaDAO().listarAlumnosPorSeccion(seccionTutorada.getIdSeccion());
                     request.setAttribute("listaAlumnos", alumnosSeccion);
                     
