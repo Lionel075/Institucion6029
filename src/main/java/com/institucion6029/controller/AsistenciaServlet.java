@@ -42,6 +42,7 @@ public class AsistenciaServlet extends HttpServlet {
         
         LOG.info("Verificando acceso para el ID: {} con ID de Rol: {}", user.getIdUsuario(), user.getIdRol());
         
+        //Solo los docentes (rol 2) pueden ver este panel
         if (user.getIdRol() != 2) { // 2 = DOCENTE
             response.sendRedirect(request.getContextPath() + "/login.jsp?error=RolDocenteInvalido");
             return;
@@ -49,6 +50,7 @@ public class AsistenciaServlet extends HttpServlet {
 
         String idUsuarioDocente = user.getIdUsuario(); // Recupera el código alfanumérico (ej: DOC-00010)
         
+        //Resuelve el año escolar activo
         int anoOperativo;
         try {
             anoOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
@@ -59,17 +61,20 @@ public class AsistenciaServlet extends HttpServlet {
         }
         
         try {
+        	//Busca la ficha del docente asociada a este usuario
             Docente docenteInfo = DAOFactory.getDocenteDAO().obtenerPorIdUsuario(idUsuarioDocente);
             
             if (docenteInfo != null) {
                 request.setAttribute("docente", docenteInfo);
                 
+                //Busca la sección de la que este docente es tutor, para el año activo
                 Seccion seccionTutorada = DAOFactory.getDocenteDAO().obtenerSeccionTutorada(idUsuarioDocente, anoOperativo);
                 
                 if (seccionTutorada != null) {
                     request.setAttribute("seccion", seccionTutorada);
                     
                     //Regla corporativa de Turnos Académicos basados en el grado de tu objeto Seccion
+                    // Determina el turno (Mañana/Tarde) leyendo el texto del grado de la sección
                     String grado = seccionTutorada.getGrado(); // Ej: "1° Primaria"
                     String turno = "Mañana";
                     if (grado.contains("4°") || grado.contains("5°") || grado.contains("6°")) {
