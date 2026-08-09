@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 
 import com.institucion6029.dao.MatriculaDAO;
 import com.institucion6029.model.ReservaMatricula;
-import com.institucion6029.model.BitacoraCancelacion;
 import com.institucion6029.utility.Conexion;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.exception.ReservaDuplicadaException;
@@ -46,7 +45,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	        con = Conexion.obtenerConexion();
 	        con.setAutoCommit(false);
 
-	        // 1. Determina si el periodo de matrícula está abierto y qué tipo aplica
 	        String tipoCalculado = null;
 	        try (PreparedStatement pstmtPeriodo = con.prepareStatement(sqlPeriodo)) {
 	            pstmtPeriodo.setInt(1, reserva.getIdAnio());
@@ -65,7 +63,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	        }
 	        reserva.setTipoReserva(tipoCalculado);
 
-	        // 2. Rechaza si el alumno ya tiene una reserva vigente
 	        try (PreparedStatement pstmtDup = con.prepareStatement(sqlDuplicado)) {
 	            pstmtDup.setInt(1, reserva.getIdAlumno());
 	            pstmtDup.setInt(2, reserva.getIdAnio());
@@ -80,7 +77,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	            }
 	        }
 
-	        // 3. Bloquea y asigna sección con cupo
 	        Seccion seccionAsignada = null;
 
 	        try (PreparedStatement pstmtSeccion = con.prepareStatement(sqlSeccion)) {
@@ -102,10 +98,9 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 
 	        if (seccionAsignada == null) {
 	            con.rollback();
-	            return null; // Sin cupo en A, B ni C
+	            return null;
 	        }
 
-	        // 4. Inserta la reserva con el tipo ya calculado (no hardcodeado)
 	        try (PreparedStatement pstmtInsert = con.prepareStatement(sqlInsertReserva)) {
 	            pstmtInsert.setInt(1, reserva.getIdAlumno());
 	            pstmtInsert.setInt(2, seccionAsignada.getIdSeccion());
@@ -115,7 +110,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	            pstmtInsert.executeUpdate();
 	        }
 
-	        // 5. Descuenta la vacante
 	        try (PreparedStatement pstmtUpdate = con.prepareStatement(sqlDescuentoVacante)) {
 	            pstmtUpdate.setInt(1, seccionAsignada.getIdSeccion());
 	            if (pstmtUpdate.executeUpdate() == 0) {
@@ -128,12 +122,8 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	        return seccionAsignada;
 
 	    } catch (ReservaDuplicadaException | PeriodoMatriculaCerradoException e) {
-	        throw e; // se re-lanzan tal cual para que el Servlet distinga cada caso
+	        throw e;
 	    } catch (SQLException e) {
-	        // Error real de base de datos (ej. condición de carrera que dispara el
-	        // UNIQUE KEY uq_reserva_activa_por_alumno_ano, lock-timeout, caída de
-	        // conexión). NO es lo mismo que "sin vacantes": se relanza como
-	        // ErrorTransaccionException para que el Servlet no confunda ambos casos.
 	        System.err.println("[MatriculaDAOImpl] Error en transacción de reserva con control de cupo: " + e.getMessage());
 	        if (con != null) {
 	            try { con.rollback(); } catch (SQLException ex) {
@@ -154,64 +144,4 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	        }
 	    }
 	}
-	
-	@Override
-	public boolean registrarReservaMatricula(ReservaMatricula reserva) {
-	    // Se omite fecha_hora_reserva en la inserción para que MySQL use su DEFAULT CURRENT_TIMESTAMP
-	    String sql = "INSERT INTO mat_reservas_matricula (id_alumno, id_seccion, id_ano, tipo_reserva, estado_reserva) VALUES (?, ?, ?, ?, ?)";
-
-	    try (Connection con = Conexion.obtenerConexion();
-	         PreparedStatement pstmt = con.prepareStatement(sql)) {
-	        
-	        pstmt.setInt(1, reserva.getIdAlumno());
-	        pstmt.setInt(2, reserva.getIdSeccion());
-	        pstmt.setInt(3, reserva.getIdAnio());
-	        pstmt.setString(4, reserva.getTipoReserva());
-	        pstmt.setString(5, reserva.getEstadoReserva()); // Inicia como 'Pendiente'
-	        
-	        return pstmt.executeUpdate() > 0;
-	        
-	    } catch (SQLException e) {
-	        System.err.println("[MatriculaDAOImpl] Error al registrar reserva de matrícula: " + e.getMessage());
-	        return false;
-	    }
-	}
-
-    @Override
-    public boolean actualizarEstadoReserva(int idReserva, String nuevoEstado) {
-        String sql = "UPDATE mat_reservas_matricula SET estado_reserva = ? WHERE id_reserva = ?";
-
-        try (Connection con = Conexion.obtenerConexion();
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
-            
-            pstmt.setString(1, nuevoEstado);
-            pstmt.setInt(2, idReserva);
-            
-            return pstmt.executeUpdate() > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("[MatriculaDAOImpl] Error al actualizar estado de la reserva: " + e.getMessage());
-            return false;
-        }
-    }
-
-    @Override
-    public boolean registrarCancelacionPreferencial(BitacoraCancelacion bitacora) {
-        // Se omite fecha_cancelacion para que use el TIMESTAMP por defecto del sistema
-        String sql = "INSERT INTO mat_bitacora_cancelaciones_preferencia (id_alumno, id_ano, motivo) VALUES (?, ?, ?)";
-
-        try (Connection con = Conexion.obtenerConexion();
-             PreparedStatement pstmt = con.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, bitacora.getIdAlumno());
-            pstmt.setInt(2, bitacora.getIdAnio());
-            pstmt.setString(3, bitacora.getMotivo());
-            
-            return pstmt.executeUpdate() > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("[MatriculaDAOImpl] Error al registrar auditoría en bitácora: " + e.getMessage());
-            return false;
-        }
-    }
 }

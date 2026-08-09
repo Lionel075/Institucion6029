@@ -16,6 +16,7 @@ import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
 import com.institucion6029.model.Alumno;
 import com.institucion6029.utility.ConfiguracionAcademica;
+import com.institucion6029.utility.GradosAcademicos;
 
 @WebServlet("/dashboard")
 public class DashboardServlet extends HttpServlet {
@@ -58,7 +59,7 @@ public class DashboardServlet extends HttpServlet {
             }
 
             Map<String, Integer> vacantesPorGrado = new HashMap<>();
-            String[] grados = {"1° Primaria", "2° Primaria", "3° Primaria", "4° Primaria", "5° Primaria", "6° Primaria"};
+            String[] grados = GradosAcademicos.TODOS;
 
             for (String g : grados) {
                 int vacantes = (anioOperativo == -1) ? 0

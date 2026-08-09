@@ -112,6 +112,13 @@
             </div>
         </c:if>
         
+        <c:if test="${flashError eq 'GradoInvalido'}">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Grado inválido.</strong> El grado académico seleccionado no es válido. Intente nuevamente desde el formulario.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </c:if>
+        
         <c:if test="${flashError eq 'GradoSinVacantes'}">
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <strong>Sin vacantes.</strong> Las secciones A, B y C del grado seleccionado ya alcanzaron el aforo máximo (32 alumnos).
@@ -138,10 +145,6 @@
             <h2 class="h4 text-dark mb-0">
                 <i class="text-primary">&#9679;</i> Mis Hijos Registrados
             </h2>
-        </div>
-
-        <div class="alert alert-info py-2 px-3 mb-4 small" role="alert">
-            <strong>* Nota Corporativa:</strong> Las cuentas asociadas a códigos primos visualizan automáticamente dos estudiantes en orden creciente según la regla de negocio.
         </div>
 
         <!-- Grid de tarjetas de hijos -->

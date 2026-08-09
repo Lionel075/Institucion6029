@@ -42,8 +42,17 @@ public class LoginServlet extends HttpServlet {
             Usuario usuarioAutenticado = DAOFactory.getUsuarioDAO().validarAcceso(txtUsuario, txtClave);
             
             if (usuarioAutenticado != null) {
-                // 2. Crear sesión activa en el contenedor Tomcat 11
+                // 2. Crear (o recuperar) la sesión antes de autenticar
                 HttpSession session = request.getSession(true);
+                
+                // 2-B. NUEVO: regenera el ID de sesión tras un login exitoso.
+                // Previene fijación de sesión: si el ID ya existía antes del login
+                // (por ejemplo, fijado por un atacante), este nuevo ID lo invalida.
+                // request.changeSessionId() conserva los atributos ya seteados en
+                // la sesión (ninguno en este punto, ya que se llama antes de
+                // setAttribute("usuario", ...) más abajo).
+                request.changeSessionId();
+                
                 session.setAttribute("usuario", usuarioAutenticado);
                 
                 System.out.println("[6029-Login] Sesión iniciada con éxito para el ID: " + usuarioAutenticado.getIdUsuario());
