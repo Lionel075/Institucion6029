@@ -64,15 +64,23 @@
         <!-- Cabecera de Usuario / Tarjeta Superior -->
         <div class="d-flex justify-content-between align-items-center p-3 mb-4 bg-white rounded shadow-sm">
             <span class="text-muted">
-                Bienvenido Apoderado: <strong class="text-primary">${sessionScope.usuario.idUsuario}</strong>
+                Bienvenido Apoderado: 
+                <strong class="text-primary">
+                ${not empty sessionScope.usuario.nombreCompleto ? sessionScope.usuario.nombreCompleto : sessionScope.usuario.idUsuario}
+                </strong>
             </span>
             <a href="${pageContext.request.contextPath}/login" class="btn btn-outline-danger btn-sm">Cerrar Sesión</a>
         </div>
 
         <!-- Bloque del Título -->
-        <div class="mb-4">
-            <h1 class="h3 text-dark fw-bold">Panel de Matrícula Operativo 2027</h1>
-            <p class="text-secondary small mb-0">Costo Institucional Regular: S/. 0.00 (Por defecto)</p>
+        <div class="mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 text-dark fw-bold">Panel de Matrícula Operativo 2027</h1>
+                <p class="text-secondary small mb-0">Costo Institucional Regular: S/. 0.00 (Por defecto)</p>
+            </div>
+            <a href="${pageContext.request.contextPath}/matricula/mis-reservas" class="btn btn-outline-primary btn-sm">
+                Ver Mis Reservas
+            </a>
         </div>
 
         <!-- Alertas Dinámicas del Sistema (Flash Attributes vía HttpSession) -->

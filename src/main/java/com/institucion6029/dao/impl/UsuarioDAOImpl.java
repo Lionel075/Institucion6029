@@ -21,8 +21,11 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public Usuario validarAcceso(String usuario, String clave) {
         Usuario user = null;
         // Ya NO se filtra por contrasenia en el SQL: el hash se valida en Java
-        String sqlBuscar = "SELECT id_usuario, correo, contrasenia, id_rol FROM acc_usuarios "
-                          + "WHERE (id_usuario = ? OR correo = ?)";
+        String sqlBuscar = "SELECT u.id_usuario, u.correo, u.contrasenia, u.id_rol, "
+                + "p.nombres, p.apellidos "
+                + "FROM acc_usuarios u "
+                + "LEFT JOIN per_padres_apoderados p ON p.id_usuario = u.id_usuario "
+                + "WHERE (u.id_usuario = ? OR u.correo = ?)";
 
         try (Connection con = Conexion.obtenerConexion();
              PreparedStatement pstmt = con.prepareStatement(sqlBuscar)) {
@@ -40,6 +43,11 @@ public class UsuarioDAOImpl implements UsuarioDAO {
                     user.setCorreo(rs.getString("correo"));
                     user.setClave(hashAlmacenado);
                     user.setIdRol(rs.getInt("id_rol"));
+                    
+                    String nombres = rs.getString("nombres");
+                    if (nombres != null) {
+                        user.setNombreCompleto(nombres + " " + rs.getString("apellidos"));
+                    }
                 }
             }
 

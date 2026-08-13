@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.util.List;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
 import com.institucion6029.model.Seccion;
@@ -22,7 +23,7 @@ import com.institucion6029.utility.GradosAcademicos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@WebServlet("/matricula")
+@WebServlet({"/matricula", "/matricula/mis-reservas"})
 public class MatriculaServlet extends HttpServlet {
     
 	private static final Logger LOG = LoggerFactory.getLogger(MatriculaServlet.class);
@@ -33,22 +34,54 @@ public class MatriculaServlet extends HttpServlet {
         
         HttpSession session = request.getSession(false);
         
-        if (session != null && session.getAttribute("usuario") != null) {
-            Usuario user = (Usuario) session.getAttribute("usuario");
-            
-            if (user.getIdRol() == 1) { 
-                
-                // Transferir el ID del alumno que viene desde el dashboard al formulario de reserva
-                String idAlumno = request.getParameter("idAlumno");
-                if (idAlumno != null) {
-                    request.setAttribute("idAlumnoSeleccionado", idAlumno);
-                }
-                
-                request.getRequestDispatcher("/WEB-INF/views/reserva.jsp").forward(request, response);
+        if (session == null || session.getAttribute("usuario") == null) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp?error=NoAutorizado");
+            return;
+        }
+
+        Usuario user = (Usuario) session.getAttribute("usuario");
+
+        if (user.getIdRol() != 1) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp?error=NoAutorizado");
+            return;
+        }
+
+        // NUEVO: distingue el listado "Mis Reservas" del formulario de reserva
+        if ("/matricula/mis-reservas".equals(request.getServletPath())) {
+
+            int anioOperativo;
+            try {
+                anioOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
+            } catch (IllegalStateException e) {
+                LOG.warn("[MatriculaServlet] Sin año activo al listar reservas: {}", e.getMessage());
+                response.sendRedirect(request.getContextPath() + "/dashboard");
                 return;
             }
+
+            List<ReservaMatricula> misReservas = DAOFactory.getMatriculaDAO()
+                    .listarReservasPorApoderado(user.getIdUsuario(), anioOperativo);
+            request.setAttribute("misReservas", misReservas);
+
+            if (session.getAttribute("flashMsg") != null) {
+                request.setAttribute("flashMsg", session.getAttribute("flashMsg"));
+                session.removeAttribute("flashMsg");
+            }
+            if (session.getAttribute("flashError") != null) {
+                request.setAttribute("flashError", session.getAttribute("flashError"));
+                session.removeAttribute("flashError");
+            }
+
+            request.getRequestDispatcher("/WEB-INF/views/misReservas.jsp").forward(request, response);
+            return;
         }
-        response.sendRedirect(request.getContextPath() + "/login.jsp?error=NoAutorizado");
+
+        // Transferir el ID del alumno que viene desde el dashboard al formulario de reserva
+        String idAlumno = request.getParameter("idAlumno");
+        if (idAlumno != null) {
+            request.setAttribute("idAlumnoSeleccionado", idAlumno);
+        }
+
+        request.getRequestDispatcher("/WEB-INF/views/reserva.jsp").forward(request, response);
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
@@ -169,6 +202,35 @@ public class MatriculaServlet extends HttpServlet {
                 session.setAttribute("flashError", "ErrorInterno");
                 response.sendRedirect(request.getContextPath() + "/dashboard");
             }
+            
+        } else if ("cancelar".equals(accion)) {
+
+            String idReservaParam = request.getParameter("idReserva");
+            if (idReservaParam == null || idReservaParam.trim().isEmpty()) {
+                session.setAttribute("flashError", "ErrorInterno");
+                response.sendRedirect(request.getContextPath() + "/matricula/mis-reservas");
+                return;
+            }
+
+            try {
+                int idReserva = Integer.parseInt(idReservaParam.trim());
+                boolean cancelada = DAOFactory.getMatriculaDAO().cancelarReserva(idReserva, user.getIdUsuario());
+
+                if (cancelada) {
+                    session.setAttribute("flashMsg", "CancelacionExitosa");
+                } else {
+                    LOG.warn("Cancelación rechazada. idReserva={} — usuario: {}", idReserva, user.getIdUsuario());
+                    session.setAttribute("flashError", "NoSePudoCancelar");
+                }
+            } catch (NumberFormatException e) {
+                LOG.warn("idReserva inválido recibido al cancelar: {}", idReservaParam);
+                session.setAttribute("flashError", "ErrorInterno");
+            } catch (ErrorTransaccionException e) {
+                LOG.error("Error de transacción al cancelar reserva", e);
+                session.setAttribute("flashError", "ErrorTransaccion");
+            }
+
+            response.sendRedirect(request.getContextPath() + "/matricula/mis-reservas");
 
         } else {
             // 6. NUEVO: rama por defecto. Antes, cualquier "accion" distinto de "reservar"

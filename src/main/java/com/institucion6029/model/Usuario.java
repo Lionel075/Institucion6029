@@ -8,6 +8,7 @@ public class Usuario {
 	private String idUsuario;
 	private String correo;
 	private String clave;
+	private String nombreCompleto;
 	private int idRol;
 	private String estadoUsuario;
 	private Timestamp fechaCreacion;
@@ -17,12 +18,13 @@ public class Usuario {
 		
 	}
 
-	public Usuario(String idUsuario, String correo, String clave, int idRol, String estadoUsuario,
+	public Usuario(String idUsuario, String correo, String clave, String nombreCompleto, int idRol, String estadoUsuario,
 			Timestamp fechaCreacion) {
 		super();
 		this.idUsuario = idUsuario;
 		this.correo = correo;
 		this.clave = clave;
+		this.nombreCompleto = nombreCompleto;
 		this.idRol = idRol;
 		this.estadoUsuario = estadoUsuario;
 		this.fechaCreacion = fechaCreacion;
@@ -53,6 +55,14 @@ public class Usuario {
 		this.clave = contrasenia;
 	}
 
+	public String getNombreCompleto() {
+	    return nombreCompleto;
+	}
+
+	public void setNombreCompleto(String nombreCompleto) {
+	    this.nombreCompleto = nombreCompleto;
+	}
+	
 	public int getIdRol() {
 		return idRol;
 	}

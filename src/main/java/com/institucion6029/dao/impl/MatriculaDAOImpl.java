@@ -13,6 +13,9 @@ import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
 import com.institucion6029.exception.ErrorTransaccionException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,6 +148,131 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                con.close();
 	            } catch (SQLException e) {
 	            	LOG.error("Error al cerrar conexión tras registrar reserva", e);
+	            }
+	        }
+	    }
+	}
+	
+	@Override
+	public List<ReservaMatricula> listarReservasPorApoderado(String idPadre, int idAno) {
+	    List<ReservaMatricula> lista = new ArrayList<>();
+	    String sql = "SELECT r.id_reserva, r.id_alumno, r.id_seccion, r.id_ano, r.fecha_hora_reserva, "
+	               + "r.tipo_reserva, r.estado_reserva, a.nombres, a.apellidos, s.grado, s.seccion "
+	               + "FROM mat_reservas_matricula r "
+	               + "JOIN per_alumnos a ON r.id_alumno = a.id_alumno "
+	               + "JOIN sch_secciones s ON r.id_seccion = s.id_seccion "
+	               + "WHERE a.id_padre = ? AND r.id_ano = ? "
+	               + "ORDER BY r.fecha_hora_reserva DESC";
+
+	    try (Connection con = Conexion.obtenerConexion();
+	         PreparedStatement pstmt = con.prepareStatement(sql)) {
+
+	        pstmt.setString(1, idPadre);
+	        pstmt.setInt(2, idAno);
+
+	        try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	                ReservaMatricula r = new ReservaMatricula();
+	                r.setIdReserva(rs.getInt("id_reserva"));
+	                r.setIdAlumno(rs.getInt("id_alumno"));
+	                r.setIdSeccion(rs.getInt("id_seccion"));
+	                r.setIdAnio(rs.getInt("id_ano"));
+	                r.setFechaHoraReserva(rs.getTimestamp("fecha_hora_reserva"));
+	                r.setTipoReserva(rs.getString("tipo_reserva"));
+	                r.setEstadoReserva(rs.getString("estado_reserva"));
+	                // Campos de solo lectura para la vista, no son columnas propias de la reserva
+	                r.setNombreAlumno(rs.getString("nombres"));
+	                r.setApellidosAlumno(rs.getString("apellidos"));
+	                r.setGrado(rs.getString("grado"));
+	                r.setSeccion(rs.getString("seccion"));
+	                lista.add(r);
+	            }
+	        }
+	    } catch (SQLException e) {
+	        LOG.error("Error al listar reservas del apoderado. idPadre={}", idPadre, e);
+	    }
+	    return lista;
+	}
+
+	@Override
+	public boolean cancelarReserva(int idReserva, String idPadreSolicitante) throws ErrorTransaccionException {
+
+	    String sqlBuscar = "SELECT r.id_seccion, r.estado_reserva, a.id_padre "
+	                      + "FROM mat_reservas_matricula r "
+	                      + "JOIN per_alumnos a ON r.id_alumno = a.id_alumno "
+	                      + "WHERE r.id_reserva = ? FOR UPDATE";
+
+	    String sqlEliminar = "DELETE FROM mat_reservas_matricula WHERE id_reserva = ?";
+
+	    String sqlDevolverVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
+	                               + "WHERE id_seccion = ?";
+
+	    Connection con = null;
+	    try {
+	        con = Conexion.obtenerConexion();
+	        con.setAutoCommit(false);
+
+	        int idSeccion;
+	        try (PreparedStatement pstmtBuscar = con.prepareStatement(sqlBuscar)) {
+	            pstmtBuscar.setInt(1, idReserva);
+
+	            try (ResultSet rs = pstmtBuscar.executeQuery()) {
+	                if (!rs.next()) {
+	                    con.rollback();
+	                    return false; // La reserva no existe
+	                }
+
+	                String idPadreReal = rs.getString("id_padre");
+	                String estadoActual = rs.getString("estado_reserva");
+	                idSeccion = rs.getInt("id_seccion");
+
+	                // Verificación de pertenencia (evita IDOR)
+	                if (!idPadreReal.equals(idPadreSolicitante)) {
+	                    LOG.warn("Intento de cancelación no autorizado. idReserva={} — solicitante: {}",
+	                            idReserva, idPadreSolicitante);
+	                    con.rollback();
+	                    return false;
+	                }
+
+	                // Solo Pendiente es cancelable por el apoderado
+	                if (!"Pendiente".equals(estadoActual)) {
+	                    LOG.warn("Cancelación rechazada: idReserva={} está en estado '{}', no 'Pendiente'",
+	                            idReserva, estadoActual);
+	                    con.rollback();
+	                    return false;
+	                }
+	            }
+	        }
+
+	        try (PreparedStatement pstmtEliminar = con.prepareStatement(sqlEliminar)) {
+	            pstmtEliminar.setInt(1, idReserva);
+	            pstmtEliminar.executeUpdate();
+	        }
+
+	        try (PreparedStatement pstmtDevolver = con.prepareStatement(sqlDevolverVacante)) {
+	            pstmtDevolver.setInt(1, idSeccion);
+	            pstmtDevolver.executeUpdate();
+	        }
+
+	        con.commit();
+	        return true;
+
+	    } catch (SQLException e) {
+	        LOG.error("Error en transacción de cancelación. idReserva={}", idReserva, e);
+	        if (con != null) {
+	            try { con.rollback(); } catch (SQLException ex) {
+	                LOG.error("Error al hacer rollback de la cancelación", ex);
+	            }
+	        }
+	        throw new ErrorTransaccionException(
+	            "Fallo de base de datos al cancelar la reserva idReserva=" + idReserva + ": " + e.getMessage(), e);
+	    } finally {
+	        if (con != null) {
+	            try {
+	                con.setAutoCommit(true);
+	                con.close();
+	            } catch (SQLException e) {
+	                LOG.error("Error al cerrar conexión tras cancelar reserva", e);
 	            }
 	        }
 	    }

@@ -31,7 +31,8 @@
         <p><strong>Políticas Corporativas de Matrícula (Periodo 2027):</strong></p>
         <p>• El costo institucional de la matrícula y pensión está fijado en S/. 0.00 por defecto.</p>
         <p>• Una vez enviada la solicitud, el sistema validará el aforo (máximo 32 alumnos por sección).</p>
-        <p>• La vacante pasará a un estado <strong>PENDIENTE</strong>, otorgándole una ventana de atención de 48 horas.</p>
+        <p>• La vacante pasará a un estado <strong>PENDIENTE</strong>, otorgándole una ventana de atención de 48 horas
+             para realizar el pago. Caso no se culmine el pago se procederá a <strong>LIBERAR</strong> la vacante</p>
     </div>
 
     <!-- El formulario apunta al servlet /matricula mediante método POST -->
@@ -44,6 +45,11 @@
             <label for="idAlumno">Código del Estudiante Seleccionado:</label>
             <!-- Recupera el ID transferido dinámicamente desde el controlador doGet -->
             <input type="text" id="idAlumno" name="idAlumno" value="${idAlumnoSeleccionado}" readonly required>
+                <c:if test="${not empty nombreAlumnoSeleccionado}">
+                    <small style="display: block; margin-top: 6px; color: #64748b;">
+                    ${nombreAlumnoSeleccionado}
+                    </small>
+                </c:if>
         </div>
 
         <div class="form-group">

@@ -13,13 +13,19 @@ public class ReservaMatricula {
 	private String tipoReserva;
 	private String estadoReserva;
 	
+	private String nombreAlumno;
+	private String apellidosAlumno;
+	private String grado;
+	private String seccion;
+	
 	//Constructor
 	public ReservaMatricula() {
 		
 	}
 
 	public ReservaMatricula(int idReserva, int idAlumno, int idSeccion, int idAnio, Timestamp fechaHoraReserva,
-			String tipoReserva, String estadoReserva) {
+			String tipoReserva, String estadoReserva, String nombreAlumno, String apellidosAlumno, String grado,
+			String seccion) {
 		super();
 		this.idReserva = idReserva;
 		this.idAlumno = idAlumno;
@@ -28,6 +34,11 @@ public class ReservaMatricula {
 		this.fechaHoraReserva = fechaHoraReserva;
 		this.tipoReserva = tipoReserva;
 		this.estadoReserva = estadoReserva;
+		
+		this.nombreAlumno = nombreAlumno;
+		this.apellidosAlumno = apellidosAlumno;
+		this.grado = grado;
+		this.seccion = seccion;
 	}
 	
 	//Métodos Getters y Setters
@@ -86,5 +97,17 @@ public class ReservaMatricula {
 	public void setEstadoReserva(String estadoReserva) {
 		this.estadoReserva = estadoReserva;
 	}
+	
+	public String getNombreAlumno() { return nombreAlumno; }
+	public void setNombreAlumno(String nombreAlumno) { this.nombreAlumno = nombreAlumno; }
+
+	public String getApellidosAlumno() { return apellidosAlumno; }
+	public void setApellidosAlumno(String apellidosAlumno) { this.apellidosAlumno = apellidosAlumno; }
+
+	public String getGrado() { return grado; }
+	public void setGrado(String grado) { this.grado = grado; }
+
+	public String getSeccion() { return seccion; }
+	public void setSeccion(String seccion) { this.seccion = seccion; }
 	
 }
