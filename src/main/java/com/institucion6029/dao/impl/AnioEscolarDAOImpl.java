@@ -19,8 +19,6 @@ public class AnioEscolarDAOImpl implements AnioEscolarDAO {
     @Override
     public AnioEscolar obtenerAnioActivo() {
         AnioEscolar anio = null;
-        // Regla de negocio: solo debe existir UN año escolar en estado 'Activo' a la vez.
-        // Si hubiera más de uno por error de datos, se toma el de id_ano más alto (el más reciente).
         String sql = "SELECT id_ano, anio_calendario, fecha_inicio_preferencial, fecha_fin_preferencial, "
                    + "fecha_inicio_general, fecha_fin_general, estado_ano "
                    + "FROM cfg_anos_escolares WHERE estado_ano = 'Activo' "

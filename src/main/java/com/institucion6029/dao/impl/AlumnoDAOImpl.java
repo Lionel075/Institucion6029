@@ -16,7 +16,6 @@ public class AlumnoDAOImpl implements AlumnoDAO {
     @Override
     public List<Alumno> listarHijosPorPadre(String idPadre) {
         List<Alumno> lista = new ArrayList<>();
-        // CORRECCIÓN: Se cambió 'mtr_alumnos' por el nombre real de tu base de datos 'per_alumnos'
         String sql = "SELECT id_alumno, nombres, apellidos, fecha_nacimiento, id_padre "
                    + "FROM per_alumnos WHERE id_padre = ? ORDER BY id_alumno ASC";
 

@@ -15,5 +15,6 @@ public interface MatriculaDAO {
     List<ReservaMatricula> listarReservasPorApoderado(String idPadre, int idAno);
 
     boolean cancelarReserva(int idReserva, String idPadreSolicitante) throws ErrorTransaccionException;
-}
 
+    int expirarReservasVencidas(int horasLimite) throws ErrorTransaccionException;
+}

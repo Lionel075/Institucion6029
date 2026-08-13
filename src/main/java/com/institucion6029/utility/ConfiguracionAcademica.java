@@ -3,15 +3,6 @@ package com.institucion6029.utility;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.AnioEscolar;
 
-/**
- * Punto único de acceso al "año operativo activo". Reemplaza los hardcodeos
- * de ANIO_OPERATIVO = 2 que antes vivían repetidos en MatriculaServlet,
- * AsistenciaServlet y DashboardServlet.
- *
- * Se cachea en memoria con un TTL corto: evita una consulta a BD en cada
- * request, pero igual refleja un cambio de año activo (hecho por el director)
- * sin necesidad de reiniciar Tomcat.
- */
 public class ConfiguracionAcademica {
 
     private static final long TTL_MILISEGUNDOS = 5 * 60 * 1000; // 5 minutos
@@ -23,14 +14,6 @@ public class ConfiguracionAcademica {
     private ConfiguracionAcademica() {
     }
 
-    /**
-     * @return el id_ano activo actual.
-     * @throws IllegalStateException si no hay ningún año escolar activo
-     *         configurado en cfg_anos_escolares. Esto es una condición de
-     *         configuración, no un error transitorio: se propaga para que
-     *         el llamador decida cómo informarlo (no debe asumirse un valor
-     *         por defecto silencioso, que fue justamente el problema original).
-     */
     public static int obtenerAnioOperativoActivo() {
         return obtenerAnioEscolarActivo().getIdAnio();
     }
@@ -44,7 +27,6 @@ public class ConfiguracionAcademica {
         }
 
         synchronized (LOCK) {
-            // Doble chequeo: otro hilo pudo haber refrescado mientras esperábamos el lock
             if (anioCacheado != null && (System.currentTimeMillis() - ultimaCarga) < TTL_MILISEGUNDOS) {
                 return anioCacheado;
             }
@@ -63,7 +45,6 @@ public class ConfiguracionAcademica {
         }
     }
 
-    /** Invalida la caché manualmente (útil si más adelante hay un panel de admin que cambia el año activo). */
     public static void invalidarCache() {
         synchronized (LOCK) {
             anioCacheado = null;

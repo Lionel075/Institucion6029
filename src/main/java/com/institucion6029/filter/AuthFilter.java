@@ -34,7 +34,6 @@ public class AuthFilter implements Filter {
         if (loggedIn) {
             Usuario user = (Usuario) session.getAttribute("usuario");
             
-            // Si la ruta solicitada es exactamente la raíz del dashboard, pasa directo sin validar módulos
             if (uri.endsWith("/dashboard")) {
                 chain.doFilter(request, response);
                 return;

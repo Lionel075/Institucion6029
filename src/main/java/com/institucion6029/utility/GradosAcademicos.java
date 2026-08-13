@@ -5,11 +5,6 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Lista única de los grados académicos válidos para Matrícula.
- * Antes vivía duplicada como arreglo local en DashboardServlet y no existía
- * en absoluto en MatriculaServlet (que no validaba el "grado" recibido).
- */
 public final class GradosAcademicos {
 
     public static final String[] TODOS = {

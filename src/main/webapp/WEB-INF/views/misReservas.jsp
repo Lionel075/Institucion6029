@@ -84,6 +84,9 @@
                                                     <c:when test="${r.estadoReserva eq 'Aprobada'}">
                                                         <span class="badge bg-success">Aprobada</span>
                                                     </c:when>
+                                                    <c:when test="${r.estadoReserva eq 'Expirada'}">
+                                                        <span class="badge bg-danger">Expirada</span>
+                                                    </c:when>
                                                     <c:otherwise>
                                                         <span class="badge bg-secondary">${r.estadoReserva}</span>
                                                     </c:otherwise>

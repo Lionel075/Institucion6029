@@ -180,7 +180,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                r.setFechaHoraReserva(rs.getTimestamp("fecha_hora_reserva"));
 	                r.setTipoReserva(rs.getString("tipo_reserva"));
 	                r.setEstadoReserva(rs.getString("estado_reserva"));
-	                // Campos de solo lectura para la vista, no son columnas propias de la reserva
 	                r.setNombreAlumno(rs.getString("nombres"));
 	                r.setApellidosAlumno(rs.getString("apellidos"));
 	                r.setGrado(rs.getString("grado"));
@@ -226,7 +225,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                String estadoActual = rs.getString("estado_reserva");
 	                idSeccion = rs.getInt("id_seccion");
 
-	                // Verificación de pertenencia (evita IDOR)
 	                if (!idPadreReal.equals(idPadreSolicitante)) {
 	                    LOG.warn("Intento de cancelación no autorizado. idReserva={} — solicitante: {}",
 	                            idReserva, idPadreSolicitante);
@@ -234,7 +232,6 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                    return false;
 	                }
 
-	                // Solo Pendiente es cancelable por el apoderado
 	                if (!"Pendiente".equals(estadoActual)) {
 	                    LOG.warn("Cancelación rechazada: idReserva={} está en estado '{}', no 'Pendiente'",
 	                            idReserva, estadoActual);
@@ -273,6 +270,77 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                con.close();
 	            } catch (SQLException e) {
 	                LOG.error("Error al cerrar conexión tras cancelar reserva", e);
+	            }
+	        }
+	    }
+	}
+	
+	@Override
+	public int expirarReservasVencidas(int horasLimite) throws ErrorTransaccionException {
+
+	    String sqlBuscarVencidas = "SELECT id_reserva, id_seccion FROM mat_reservas_matricula "
+	                              + "WHERE estado_reserva = 'Pendiente' "
+	                              + "AND fecha_hora_reserva < DATE_SUB(NOW(), INTERVAL ? HOUR) "
+	                              + "FOR UPDATE";
+
+	    String sqlExpirar = "UPDATE mat_reservas_matricula SET estado_reserva = 'Expirada' WHERE id_reserva = ?";
+
+	    String sqlDevolverVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
+	                               + "WHERE id_seccion = ?";
+
+	    Connection con = null;
+	    try {
+	        con = Conexion.obtenerConexion();
+	        con.setAutoCommit(false);
+
+	        List<int[]> vencidas = new ArrayList<>(); // {idReserva, idSeccion}
+
+	        try (PreparedStatement pstmtBuscar = con.prepareStatement(sqlBuscarVencidas)) {
+	            pstmtBuscar.setInt(1, horasLimite);
+	            try (ResultSet rs = pstmtBuscar.executeQuery()) {
+	                while (rs.next()) {
+	                    vencidas.add(new int[]{ rs.getInt("id_reserva"), rs.getInt("id_seccion") });
+	                }
+	            }
+	        }
+
+	        if (vencidas.isEmpty()) {
+	            con.commit();
+	            return 0;
+	        }
+
+	        try (PreparedStatement pstmtExpirar = con.prepareStatement(sqlExpirar);
+	             PreparedStatement pstmtDevolver = con.prepareStatement(sqlDevolverVacante)) {
+
+	            for (int[] par : vencidas) {
+	                pstmtExpirar.setInt(1, par[0]);
+	                pstmtExpirar.executeUpdate();
+
+	                pstmtDevolver.setInt(1, par[1]);
+	                pstmtDevolver.executeUpdate();
+	            }
+	        }
+
+	        con.commit();
+	        LOG.info("Expiración automática: {} reserva(s) vencida(s) liberada(s).", vencidas.size());
+	        return vencidas.size();
+
+	    } catch (SQLException e) {
+	        LOG.error("Error al expirar reservas vencidas", e);
+	        if (con != null) {
+	            try { con.rollback(); } catch (SQLException ex) {
+	                LOG.error("Error al hacer rollback de expiración de reservas", ex);
+	            }
+	        }
+	        throw new ErrorTransaccionException(
+	            "Fallo de base de datos al expirar reservas vencidas: " + e.getMessage(), e);
+	    } finally {
+	        if (con != null) {
+	            try {
+	                con.setAutoCommit(true);
+	                con.close();
+	            } catch (SQLException e) {
+	                LOG.error("Error al cerrar conexión tras expirar reservas", e);
 	            }
 	        }
 	    }

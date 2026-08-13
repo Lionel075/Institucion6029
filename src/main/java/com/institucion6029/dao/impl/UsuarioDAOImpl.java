@@ -20,7 +20,6 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     @Override
     public Usuario validarAcceso(String usuario, String clave) {
         Usuario user = null;
-        // Ya NO se filtra por contrasenia en el SQL: el hash se valida en Java
         String sqlBuscar = "SELECT u.id_usuario, u.correo, u.contrasenia, u.id_rol, "
                 + "p.nombres, p.apellidos "
                 + "FROM acc_usuarios u "
@@ -58,16 +57,13 @@ public class UsuarioDAOImpl implements UsuarioDAO {
             String claveIngresada = clave.trim();
 
             if (PasswordUtil.esHashBCrypt(hashAlmacenado)) {
-                // Caso normal: ya migrado a BCrypt
                 if (!PasswordUtil.verificar(claveIngresada, hashAlmacenado)) {
                     return null;
                 }
             } else {
-                // Caso legacy: contraseña todavía en texto plano
                 if (!hashAlmacenado.equals(claveIngresada)) {
                     return null;
                 }
-                // Login correcto con clave legacy -> migración silenciosa a BCrypt
                 rehashSilencioso(con, user.getIdUsuario(), claveIngresada);
             }
 
@@ -79,11 +75,6 @@ public class UsuarioDAOImpl implements UsuarioDAO {
         }
     }
 
-    /**
-     * Re-hashea la contraseña de un usuario justo después de un login legacy exitoso.
-     * No lanza excepción hacia arriba: si falla, el login igual se considera válido
-     * (se reintentará la migración en el siguiente login).
-     */
     private void rehashSilencioso(Connection con, String idUsuario, String claveEnTextoPlano) {
         String sqlUpdate = "UPDATE acc_usuarios SET contrasenia = ? WHERE id_usuario = ?";
         try (PreparedStatement pstmt = con.prepareStatement(sqlUpdate)) {

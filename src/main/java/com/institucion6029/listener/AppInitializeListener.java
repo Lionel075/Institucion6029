@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-// SE CAMBIÓ REQUISITO DE javax A jakarta PARA COMPATIBILIDAD CON TOMCAT 11
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -13,6 +12,7 @@ import jakarta.servlet.annotation.WebListener;
 
 import com.institucion6029.model.InstitucionWeb;
 import com.institucion6029.utility.Conexion;
+import com.institucion6029.scheduler.ExpiracionReservasScheduler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,29 +30,27 @@ public class AppInitializeListener implements ServletContextListener {
         InstitucionWeb datosColegio = cargarDatosInstitucion();
 
         if (datosColegio != null) {
-            // Guardamos el objeto en el ámbito global de la aplicación web (Tomcat Context Cache)
             servletContext.setAttribute("DATOS_COLEGIO", datosColegio);
             LOG.info("Datos de la institución cargados en caché web con éxito.");
         } else {
         	LOG.error("CRÍTICO: No se pudieron precargar los datos del colegio.");
         }
+        ExpiracionReservasScheduler.iniciar();
     }
-
+    
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
     	LOG.info("Apagando el servidor web y liberando recursos globales.");
+    	
+    	ExpiracionReservasScheduler.detener();
     }
-
-    /**
-     * Consulta directa a la base de datos de manera limpia para precargar el Landing Page
-     */
+    
     private InstitucionWeb cargarDatosInstitucion() {
         InstitucionWeb institucion = null;
         String sql = "SELECT id_institucion, codigo_modular, nombre_institucion, descripcion, "
                    + "direccion, nivel_educativo, max_estudiantes_aula, pension_preferencial, "
                    + "modalidad FROM web_datos_institucion WHERE id_institucion = 1";
 
-        // Usamos tu clase Conexion que ya arroja "Conexión exitosa"
         try (Connection con = Conexion.obtenerConexion();
              PreparedStatement pstmt = con.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {

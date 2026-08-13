@@ -5,13 +5,12 @@ import com.institucion6029.dao.impl.*;
 
 public class DAOFactory {
 
-    // Instancias únicas de los DAOs (Patrón Singleton interno para optimizar memoria)
     private static UsuarioDAO usuarioDAO;
     private static AlumnoDAO alumnoDAO;
     private static SeccionDAO seccionDAO;
     private static MatriculaDAO matriculaDAO;
 
-    // Constructor privado para evitar que la fábrica sea instanciada con 'new'
+    // Constructor privado
     private DAOFactory() {
     }
 

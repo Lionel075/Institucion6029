@@ -46,7 +46,6 @@ public class MatriculaServlet extends HttpServlet {
             return;
         }
 
-        // NUEVO: distingue el listado "Mis Reservas" del formulario de reserva
         if ("/matricula/mis-reservas".equals(request.getServletPath())) {
 
             int anioOperativo;
@@ -75,7 +74,6 @@ public class MatriculaServlet extends HttpServlet {
             return;
         }
 
-        // Transferir el ID del alumno que viene desde el dashboard al formulario de reserva
         String idAlumno = request.getParameter("idAlumno");
         if (idAlumno != null) {
             request.setAttribute("idAlumnoSeleccionado", idAlumno);
@@ -99,7 +97,6 @@ public class MatriculaServlet extends HttpServlet {
 
         if ("reservar".equals(accion)) {
 
-            // 1. Captura y validación de parámetros: nulos o vacíos no evalúan aforo
             String idAlumnoParam = request.getParameter("idAlumno");
             String grado = request.getParameter("grado");
 
@@ -109,10 +106,6 @@ public class MatriculaServlet extends HttpServlet {
                 return;
             }
             
-            // 1-B. NUEVO: rechaza cualquier "grado" que no esté en la lista blanca,
-            // ANTES de resolver el año activo o tocar la BD. Evita que un valor
-            // manipulado en el <select> del formulario caiga como "GradoSinVacantes"
-            // (mensaje engañoso: el problema no es aforo, es un grado que no existe).
             if (!GradosAcademicos.esValido(grado)) {
                 System.err.println("[MatriculaServlet] Grado inválido recibido: '" + grado
                         + "' — usuario: " + user.getIdUsuario());
@@ -121,9 +114,6 @@ public class MatriculaServlet extends HttpServlet {
                 return;
             }
 
-            // 2. Año operativo activo. Resuelto ANTES del
-            // try genérico y con su propio catch, para no confundir "sin año activo"
-            // con "ErrorInterno".
             final int anioOperativo;
             try {
                 anioOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
@@ -137,8 +127,6 @@ public class MatriculaServlet extends HttpServlet {
             try {
                 int idAlumno = Integer.parseInt(idAlumnoParam.trim());
 
-                // 3. Verificación de pertenencia (evita IDOR): el alumno debe ser hijo
-                // del apoderado autenticado en sesión, no de otro cualquiera.
                 Alumno alumno = DAOFactory.getAlumnoDAO().buscarPorId(idAlumno);
 
                 if (alumno == null || !alumno.getIdPadre().equals(user.getIdUsuario())) {
@@ -156,14 +144,11 @@ public class MatriculaServlet extends HttpServlet {
                     return;
                 }
                 
-                // 4. Arma el objeto de reserva (sin id_seccion aún: lo asigna la transacción)
                 ReservaMatricula reserva = new ReservaMatricula();
                 reserva.setIdAlumno(idAlumno);
                 reserva.setIdAnio(anioOperativo);
                 reserva.setEstadoReserva("Pendiente");
 
-                // 5. Búsqueda de sección + inserción de reserva + descuento de vacante,
-                // todo en UNA sola transacción con bloqueo pesimista (FOR UPDATE).
                 Seccion seccionAsignada;
                 try {
                     seccionAsignada = DAOFactory.getMatriculaDAO()
@@ -233,9 +218,6 @@ public class MatriculaServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/matricula/mis-reservas");
 
         } else {
-            // 6. NUEVO: rama por defecto. Antes, cualquier "accion" distinto de "reservar"
-            // (nulo, vacío, o un valor manipulado en el campo hidden del formulario)
-            // dejaba el método sin sendRedirect ni forward -> respuesta vacía silenciosa.
         	LOG.warn("Acción no reconocida en /matricula: '{}' — usuario: {}", accion, user.getIdUsuario());
             session.setAttribute("flashError", "ErrorInterno");
             response.sendRedirect(request.getContextPath() + "/dashboard");
