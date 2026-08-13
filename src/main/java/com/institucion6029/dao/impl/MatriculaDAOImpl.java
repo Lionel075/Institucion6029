@@ -204,7 +204,7 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	    String sqlEliminar = "DELETE FROM mat_reservas_matricula WHERE id_reserva = ?";
 
 	    String sqlDevolverVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
-	                               + "WHERE id_seccion = ?";
+	                               + "WHERE id_seccion = ? AND vacantes_disponibles < 32";
 
 	    Connection con = null;
 	    try {
@@ -225,6 +225,7 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                String estadoActual = rs.getString("estado_reserva");
 	                idSeccion = rs.getInt("id_seccion");
 
+	                // Verificación de pertenencia
 	                if (!idPadreReal.equals(idPadreSolicitante)) {
 	                    LOG.warn("Intento de cancelación no autorizado. idReserva={} — solicitante: {}",
 	                            idReserva, idPadreSolicitante);
@@ -248,7 +249,11 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 
 	        try (PreparedStatement pstmtDevolver = con.prepareStatement(sqlDevolverVacante)) {
 	            pstmtDevolver.setInt(1, idSeccion);
-	            pstmtDevolver.executeUpdate();
+	            if (pstmtDevolver.executeUpdate() == 0) {
+	                LOG.warn("No se devolvió vacante para idSeccion={} al cancelar idReserva={}: "
+	                        + "la sección ya estaba en su tope de 32 (posible inconsistencia de datos).",
+	                        idSeccion, idReserva);
+	            }
 	        }
 
 	        con.commit();
@@ -286,7 +291,7 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	    String sqlExpirar = "UPDATE mat_reservas_matricula SET estado_reserva = 'Expirada' WHERE id_reserva = ?";
 
 	    String sqlDevolverVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
-	                               + "WHERE id_seccion = ?";
+                + "WHERE id_seccion = ? AND vacantes_disponibles < 32";
 
 	    Connection con = null;
 	    try {
@@ -312,12 +317,19 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	        try (PreparedStatement pstmtExpirar = con.prepareStatement(sqlExpirar);
 	             PreparedStatement pstmtDevolver = con.prepareStatement(sqlDevolverVacante)) {
 
-	            for (int[] par : vencidas) {
-	                pstmtExpirar.setInt(1, par[0]);
+	        	for (int[] par : vencidas) {
+	                int idReservaVencida = par[0];
+	                int idSeccionVencida = par[1];
+
+	                pstmtExpirar.setInt(1, idReservaVencida);
 	                pstmtExpirar.executeUpdate();
 
-	                pstmtDevolver.setInt(1, par[1]);
-	                pstmtDevolver.executeUpdate();
+	                pstmtDevolver.setInt(1, idSeccionVencida);
+	                if (pstmtDevolver.executeUpdate() == 0) {
+	                    LOG.warn("No se devolvió vacante para idSeccion={} al expirar idReserva={}: "
+	                            + "la sección ya estaba en su tope de 32 (posible inconsistencia de datos).",
+	                            idSeccionVencida, idReservaVencida);
+	                }
 	            }
 	        }
 
