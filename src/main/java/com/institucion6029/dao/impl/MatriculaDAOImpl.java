@@ -335,7 +335,7 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 
 	        con.commit();
 	        LOG.info("Expiración automática: {} reserva(s) vencida(s) liberada(s).", vencidas.size());
-	        return vencidas.size(); 
+	        return vencidas.size();
 
 	    } catch (SQLException e) {
 	        LOG.error("Error al expirar reservas vencidas", e);
