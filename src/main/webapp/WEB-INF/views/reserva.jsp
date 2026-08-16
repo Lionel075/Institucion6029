@@ -37,7 +37,10 @@
 
     <!-- El formulario apunta al servlet /matricula mediante método POST -->
     <form action="${pageContext.request.contextPath}/matricula" method="POST">
-        
+
+        <!-- Token anti-CSRF: emitido por CsrfFilter en el GET, validado en el POST -->
+        <input type="hidden" name="csrfToken" value="${csrfToken}">
+
         <!-- Parámetro de acción operativa requerido por el switch-case del Servlet -->
         <input type="hidden" name="accion" value="reservar">
 

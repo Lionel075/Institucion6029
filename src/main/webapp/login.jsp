@@ -36,6 +36,9 @@
     </c:if>
 
     <form action="login" method="POST">
+        <!-- Token anti-CSRF: emitido por CsrfFilter en el GET, validado en el POST -->
+        <input type="hidden" name="csrfToken" value="${csrfToken}">
+
         <div class="form-group">
             <label for="txtUsuario">Código de Usuario o Correo:</label>
             <input type="text" id="txtUsuario" name="txtUsuario" placeholder="Ej: PAD-00101 o docente@6029.edu.pe" required autocomplete="off">
@@ -52,3 +55,4 @@
 
 </body>
 </html>
+
