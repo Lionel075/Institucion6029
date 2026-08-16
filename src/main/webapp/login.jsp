@@ -46,7 +46,7 @@
             <input type="password" id="txtClave" name="txtClave" placeholder="••••••••" required>
         </div>
 
-        <button type="submit" class="btn-login">Ingresar al Sistema</button>
+        <button type="submit" class="btn-login">Ingresar Al Sistema</button>
     </form>
 </div>
 
