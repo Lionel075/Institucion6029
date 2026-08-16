@@ -40,8 +40,4 @@ public class Conexion {
               + "(conf/Catalina/localhost/) y el <resource-ref> en web.xml.", e);
         }
     }
-
-    public static void main(String[] args) {
-        System.out.println("Esta prueba requiere ejecutarse dentro de Tomcat (JNDI no disponible standalone).");
-    }
 }

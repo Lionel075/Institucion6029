@@ -44,11 +44,4 @@ public class ConfiguracionAcademica {
             return fresco;
         }
     }
-
-    public static void invalidarCache() {
-        synchronized (LOCK) {
-            anioCacheado = null;
-            ultimaCarga = 0L;
-        }
-    }
 }
