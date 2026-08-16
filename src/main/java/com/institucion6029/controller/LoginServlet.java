@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
+import com.institucion6029.utility.CsrfUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +24,8 @@ public class LoginServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate(); // Destrucción segura ante cierres o reinicios
+        if (session != null && session.getAttribute("usuario") != null) {
+            session.invalidate(); // Destrucción segura ante cierres o reinicios de sesión autenticada
         }
         request.getRequestDispatcher("/login.jsp").forward(request, response);
     }
@@ -32,7 +33,7 @@ public class LoginServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        String txtUsuario = request.getParameter("txtUsuario");
+        String txtUsuario = request.getParameter("txtUsuario"); // Puede ser correo o ID alfanumérico
         String txtClave = request.getParameter("txtClave");
         
         try {
@@ -42,7 +43,9 @@ public class LoginServlet extends HttpServlet {
                 HttpSession session = request.getSession(true);
 
                 request.changeSessionId();
-                
+
+                CsrfUtil.regenerarToken(session);
+
                 session.setAttribute("usuario", usuarioAutenticado);
                 
                 LOG.info("Sesión iniciada con éxito para el ID: {}", usuarioAutenticado.getIdUsuario());
@@ -50,6 +53,7 @@ public class LoginServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/dashboard");
                 return;
             } else {
+                // Credenciales inválidas
                 response.sendRedirect(request.getContextPath() + "/login.jsp?error=CredencialesIncorrectas");
                 return;
             }
@@ -60,4 +64,3 @@ public class LoginServlet extends HttpServlet {
         }
     }
 }
-

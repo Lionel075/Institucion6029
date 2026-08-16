@@ -116,6 +116,8 @@
                                                                 <div class="modal-footer">
                                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, mantener</button>
                                                                     <form action="${pageContext.request.contextPath}/matricula" method="POST">
+                                                                        <!-- Token anti-CSRF: emitido por CsrfFilter en el GET, validado en el POST -->
+                                                                        <input type="hidden" name="csrfToken" value="${csrfToken}">
                                                                         <input type="hidden" name="accion" value="cancelar">
                                                                         <input type="hidden" name="idReserva" value="${r.idReserva}">
                                                                         <button type="submit" class="btn btn-danger">Sí, cancelar</button>
