@@ -34,7 +34,7 @@ public class DashboardServlet extends HttpServlet {
         if (session == null || session.getAttribute("usuario") == null) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
-        }   
+        }
             
             response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
             response.setHeader("Pragma", "no-cache");
