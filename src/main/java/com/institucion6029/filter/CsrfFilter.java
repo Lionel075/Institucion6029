@@ -17,7 +17,7 @@ import com.institucion6029.utility.CsrfUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@WebFilter(urlPatterns = {"/login", "/login.jsp", "/matricula/*"})
+@WebFilter(urlPatterns = {"/login", "/login.jsp", "/matricula/*", "/direccion/*", "/asistencia/*"})
 public class CsrfFilter implements Filter {
 
     private static final Logger LOG = LoggerFactory.getLogger(CsrfFilter.class);
