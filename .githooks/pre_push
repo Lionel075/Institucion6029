@@ -1,0 +1,18 @@
+#!/bin/sh
+# Bloquea cualquier push directo a main.
+# Refuerzo local — la protección real está en la branch protection rule de GitHub.
+
+protected_branch='main'
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    if [ "$remote_ref" = "refs/heads/$protected_branch" ]; then
+        echo ""
+        echo "❌ Push bloqueado: no se permite pushear directo a '$protected_branch'."
+        echo "   Crea una rama (feature/tu-cambio) y abre un Pull Request en GitHub."
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0
