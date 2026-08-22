@@ -57,18 +57,18 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 			""";
 
 	private static final String SQL_ALUMNOS = """
-			SELECT a.id_alumno, a.nombres, a.apellidos,
-			       (SELECT x.estado_asistencia FROM asi_asistencias x
-			         WHERE x.id_alumno = a.id_alumno
-			           AND x.fecha_asistencia = CURDATE()) AS estado
-			  FROM per_alumnos a
-			  INNER JOIN mat_reservas_matricula m ON m.id_alumno = a.id_alumno
-			 WHERE m.id_seccion = ?
-			   AND m.id_ano = ?
-			   AND m.estado_reserva IN ('Pendiente','Aprobada')
-			 ORDER BY a.apellidos, a.nombres
-			""";
-
+	        SELECT a.id_alumno, a.nombres, a.apellidos,
+	               (SELECT x.estado_asistencia FROM asi_asistencias x
+	                 WHERE x.id_alumno = a.id_alumno
+	                   AND x.fecha_asistencia = CURDATE()) AS estado
+	          FROM per_alumnos a
+	          INNER JOIN mat_reservas_matricula m ON m.id_alumno = a.id_alumno
+	         WHERE m.id_seccion = ?
+	           AND m.id_ano = ?
+	           AND m.estado_reserva = 'Aprobada'
+	         ORDER BY a.apellidos, a.nombres
+	        """;
+	
 	private static final String SQL_GUARDAR = """
 			INSERT INTO asi_asistencias
 			  (id_alumno, id_seccion, id_ano, fecha_asistencia, estado_asistencia, id_docente_registro)
