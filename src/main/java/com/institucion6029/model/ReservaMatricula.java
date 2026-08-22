@@ -18,6 +18,13 @@ public class ReservaMatricula {
 	private String grado;
 	private String seccion;
 	
+	// Campos adicionales de solo lectura para el panel de Dirección
+	private String dniAlumno;
+	private String idPadre;
+	private String nombrePadre;
+	private String apellidosPadre;
+	private String telefonoPadre;
+	
 	//Constructor
 	public ReservaMatricula() {
 		
@@ -110,4 +117,20 @@ public class ReservaMatricula {
 	public String getSeccion() { return seccion; }
 	public void setSeccion(String seccion) { this.seccion = seccion; }
 	
+	public String getDniAlumno() { return dniAlumno; }
+	public void setDniAlumno(String dniAlumno) { this.dniAlumno = dniAlumno; }
+
+	public String getIdPadre() { return idPadre; }
+	public void setIdPadre(String idPadre) { this.idPadre = idPadre; }
+
+	public String getNombrePadre() { return nombrePadre; }
+	public void setNombrePadre(String nombrePadre) { this.nombrePadre = nombrePadre; }
+
+	public String getApellidosPadre() { return apellidosPadre; }
+	public void setApellidosPadre(String apellidosPadre) { this.apellidosPadre = apellidosPadre; }
+
+	public String getTelefonoPadre() { return telefonoPadre; }
+	public void setTelefonoPadre(String telefonoPadre) { this.telefonoPadre = telefonoPadre; }
+	
 }
+

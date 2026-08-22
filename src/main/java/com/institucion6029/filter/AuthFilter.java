@@ -59,6 +59,16 @@ public class AuthFilter implements Filter {
                 return;
             }
             
+            // 5. REGLA ESTRICTA PARA DIRECCIÓN (Solo Rol 3 puede pasar)
+            if (uri.contains("/direccion")) {
+                if (user.getIdRol() == 3) {
+                    chain.doFilter(request, response);
+                } else {
+                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoDireccion");
+                }
+                return;
+            }
+            
             // Cualquier otra ruta autenticada permitida
             chain.doFilter(request, response);
             return;

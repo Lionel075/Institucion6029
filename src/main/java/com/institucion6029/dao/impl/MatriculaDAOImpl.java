@@ -14,7 +14,9 @@ import com.institucion6029.exception.PeriodoMatriculaCerradoException;
 import com.institucion6029.exception.ErrorTransaccionException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -353,6 +355,194 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 	                con.close();
 	            } catch (SQLException e) {
 	                LOG.error("Error al cerrar conexión tras expirar reservas", e);
+	            }
+	        }
+	    }
+	}
+	
+	@Override
+	public List<ReservaMatricula> listarReservasPorEstado(int idAno, String estadoFiltro) {
+	    List<ReservaMatricula> lista = new ArrayList<>();
+
+	    boolean filtrarPorEstado = estadoFiltro != null && !estadoFiltro.isBlank()
+	            && !"Todas".equalsIgnoreCase(estadoFiltro);
+
+	    StringBuilder sql = new StringBuilder(
+	            "SELECT r.id_reserva, r.id_alumno, r.id_seccion, r.id_ano, r.fecha_hora_reserva, "
+	          + "r.tipo_reserva, r.estado_reserva, "
+	          + "a.nombres, a.apellidos, a.dni AS dni_alumno, a.id_padre, "
+	          + "s.grado, s.seccion, "
+	          + "p.nombres AS nombres_padre, p.apellidos AS apellidos_padre, p.telefono AS telefono_padre "
+	          + "FROM mat_reservas_matricula r "
+	          + "JOIN per_alumnos a ON r.id_alumno = a.id_alumno "
+	          + "JOIN sch_secciones s ON r.id_seccion = s.id_seccion "
+	          + "JOIN per_padres_apoderados p ON a.id_padre = p.id_usuario "
+	          + "WHERE r.id_ano = ? ");
+
+	    if (filtrarPorEstado) {
+	        sql.append("AND r.estado_reserva = ? ");
+	    }
+	    sql.append("ORDER BY r.fecha_hora_reserva ASC");
+
+	    try (Connection con = Conexion.obtenerConexion();
+	         PreparedStatement pstmt = con.prepareStatement(sql.toString())) {
+
+	        pstmt.setInt(1, idAno);
+	        if (filtrarPorEstado) {
+	            pstmt.setString(2, estadoFiltro);
+	        }
+
+	        try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	                ReservaMatricula r = new ReservaMatricula();
+	                r.setIdReserva(rs.getInt("id_reserva"));
+	                r.setIdAlumno(rs.getInt("id_alumno"));
+	                r.setIdSeccion(rs.getInt("id_seccion"));
+	                r.setIdAnio(rs.getInt("id_ano"));
+	                r.setFechaHoraReserva(rs.getTimestamp("fecha_hora_reserva"));
+	                r.setTipoReserva(rs.getString("tipo_reserva"));
+	                r.setEstadoReserva(rs.getString("estado_reserva"));
+	                r.setNombreAlumno(rs.getString("nombres"));
+	                r.setApellidosAlumno(rs.getString("apellidos"));
+	                r.setDniAlumno(rs.getString("dni_alumno"));
+	                r.setIdPadre(rs.getString("id_padre"));
+	                r.setGrado(rs.getString("grado"));
+	                r.setSeccion(rs.getString("seccion"));
+	                r.setNombrePadre(rs.getString("nombres_padre"));
+	                r.setApellidosPadre(rs.getString("apellidos_padre"));
+	                r.setTelefonoPadre(rs.getString("telefono_padre"));
+	                lista.add(r);
+	            }
+	        }
+	    } catch (SQLException e) {
+	        LOG.error("Error al listar reservas para Dirección. idAno={}, estadoFiltro={}", idAno, estadoFiltro, e);
+	    }
+	    return lista;
+	}
+
+	@Override
+	public Map<String, Integer> contarReservasPorEstado(int idAno) {
+	    Map<String, Integer> conteos = new HashMap<>();
+	    String sql = "SELECT estado_reserva, COUNT(*) AS total FROM mat_reservas_matricula "
+	               + "WHERE id_ano = ? GROUP BY estado_reserva";
+
+	    try (Connection con = Conexion.obtenerConexion();
+	         PreparedStatement pstmt = con.prepareStatement(sql)) {
+
+	        pstmt.setInt(1, idAno);
+
+	        try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	                conteos.put(rs.getString("estado_reserva"), rs.getInt("total"));
+	            }
+	        }
+	    } catch (SQLException e) {
+	        LOG.error("Error al contar reservas por estado. idAno={}", idAno, e);
+	    }
+	    return conteos;
+	}
+
+	@Override
+	public boolean aprobarReserva(int idReserva, String idUsuarioDireccion) throws ErrorTransaccionException {
+
+	    String sqlUpdate = "UPDATE mat_reservas_matricula SET estado_reserva = 'Aprobada' "
+	                      + "WHERE id_reserva = ? AND estado_reserva = 'Pendiente'";
+
+	    try (Connection con = Conexion.obtenerConexion();
+	         PreparedStatement pstmt = con.prepareStatement(sqlUpdate)) {
+
+	        pstmt.setInt(1, idReserva);
+	        int filasAfectadas = pstmt.executeUpdate();
+
+	        if (filasAfectadas > 0) {
+	            LOG.info("Reserva aprobada por Dirección. idReserva={} — aprobada por: {}",
+	                    idReserva, idUsuarioDireccion);
+	            return true;
+	        }
+
+	        LOG.warn("Aprobación rechazada: idReserva={} no existe o no está en estado 'Pendiente'.", idReserva);
+	        return false;
+
+	    } catch (SQLException e) {
+	        LOG.error("Error al aprobar reserva. idReserva={}", idReserva, e);
+	        throw new ErrorTransaccionException(
+	            "Fallo de base de datos al aprobar la reserva idReserva=" + idReserva + ": " + e.getMessage(), e);
+	    }
+	}
+
+	@Override
+	public boolean rechazarReserva(int idReserva, String idUsuarioDireccion) throws ErrorTransaccionException {
+
+	    String sqlBuscar = "SELECT id_seccion, estado_reserva FROM mat_reservas_matricula "
+	                      + "WHERE id_reserva = ? FOR UPDATE";
+
+	    String sqlEliminar = "DELETE FROM mat_reservas_matricula WHERE id_reserva = ?";
+
+	    String sqlDevolverVacante = "UPDATE sch_secciones SET vacantes_disponibles = vacantes_disponibles + 1 "
+	                               + "WHERE id_seccion = ? AND vacantes_disponibles < 32";
+
+	    Connection con = null;
+	    try {
+	        con = Conexion.obtenerConexion();
+	        con.setAutoCommit(false);
+
+	        int idSeccion;
+	        try (PreparedStatement pstmtBuscar = con.prepareStatement(sqlBuscar)) {
+	            pstmtBuscar.setInt(1, idReserva);
+
+	            try (ResultSet rs = pstmtBuscar.executeQuery()) {
+	                if (!rs.next()) {
+	                    con.rollback();
+	                    return false; // La reserva no existe
+	                }
+
+	                String estadoActual = rs.getString("estado_reserva");
+	                idSeccion = rs.getInt("id_seccion");
+
+	                if (!"Pendiente".equals(estadoActual)) {
+	                    LOG.warn("Rechazo denegado: idReserva={} está en estado '{}', no 'Pendiente'.",
+	                            idReserva, estadoActual);
+	                    con.rollback();
+	                    return false;
+	                }
+	            }
+	        }
+
+	        try (PreparedStatement pstmtEliminar = con.prepareStatement(sqlEliminar)) {
+	            pstmtEliminar.setInt(1, idReserva);
+	            pstmtEliminar.executeUpdate();
+	        }
+
+	        try (PreparedStatement pstmtDevolver = con.prepareStatement(sqlDevolverVacante)) {
+	            pstmtDevolver.setInt(1, idSeccion);
+	            if (pstmtDevolver.executeUpdate() == 0) {
+	                LOG.warn("No se devolvió vacante para idSeccion={} al rechazar idReserva={}: "
+	                        + "la sección ya estaba en su tope de 32 (posible inconsistencia de datos).",
+	                        idSeccion, idReserva);
+	            }
+	        }
+
+	        con.commit();
+	        LOG.info("Reserva rechazada por Dirección. idReserva={} — rechazada por: {}",
+	                idReserva, idUsuarioDireccion);
+	        return true;
+
+	    } catch (SQLException e) {
+	        LOG.error("Error en transacción de rechazo. idReserva={}", idReserva, e);
+	        if (con != null) {
+	            try { con.rollback(); } catch (SQLException ex) {
+	                LOG.error("Error al hacer rollback del rechazo", ex);
+	            }
+	        }
+	        throw new ErrorTransaccionException(
+	            "Fallo de base de datos al rechazar la reserva idReserva=" + idReserva + ": " + e.getMessage(), e);
+	    } finally {
+	        if (con != null) {
+	            try {
+	                con.setAutoCommit(true);
+	                con.close();
+	            } catch (SQLException e) {
+	                LOG.error("Error al cerrar conexión tras rechazar reserva", e);
 	            }
 	        }
 	    }

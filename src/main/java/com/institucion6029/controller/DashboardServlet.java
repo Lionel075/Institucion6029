@@ -15,6 +15,8 @@ import java.util.Map;
 import com.institucion6029.factory.DAOFactory;
 import com.institucion6029.model.Usuario;
 import com.institucion6029.model.Alumno;
+import com.institucion6029.model.AnioEscolar;
+import com.institucion6029.model.Seccion;
 import com.institucion6029.utility.ConfiguracionAcademica;
 import com.institucion6029.utility.GradosAcademicos;
 
@@ -88,6 +90,36 @@ public class DashboardServlet extends HttpServlet {
             return;
             
         } else if (user.getIdRol() == 3) { // 3 = DIRECTOR / DESARROLLADOR
+
+            AnioEscolar anioEscolar = null;
+            try {
+                anioEscolar = ConfiguracionAcademica.obtenerAnioEscolarActivo();
+            } catch (IllegalStateException e) {
+                LOG.warn("[DashboardServlet] Sin año activo al cargar el panel de Dirección: {}", e.getMessage());
+                request.setAttribute("sinAnioActivo", true);
+            }
+
+            if (anioEscolar != null) {
+                int idAnio = anioEscolar.getIdAnio();
+
+                Map<String, Integer> conteosReservas = DAOFactory.getMatriculaDAO().contarReservasPorEstado(idAnio);
+                List<Seccion> secciones = DAOFactory.getSeccionDAO().listarTodasLasSecciones(idAnio);
+
+                request.setAttribute("anioEscolar", anioEscolar);
+                request.setAttribute("conteosReservas", conteosReservas);
+                request.setAttribute("listaSecciones", secciones);
+            }
+
+            // --- Flash attributes ---
+            if (session.getAttribute("flashMsg") != null) {
+                request.setAttribute("flashMsg", session.getAttribute("flashMsg"));
+                session.removeAttribute("flashMsg");
+            }
+            if (session.getAttribute("flashError") != null) {
+                request.setAttribute("flashError", session.getAttribute("flashError"));
+                session.removeAttribute("flashError");
+            }
+
         	request.getRequestDispatcher("/WEB-INF/views/dashboard_admin.jsp").forward(request, response);
             return;
         } else {

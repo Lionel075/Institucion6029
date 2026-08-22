@@ -50,5 +50,13 @@ public class DAOFactory {
         }
         return anioEscolarDAO;
     }
+    private static AsistenciaDAO asistenciaDAO;
+
+    public static synchronized AsistenciaDAO getAsistenciaDAO() {
+        if (asistenciaDAO == null) {
+            asistenciaDAO = new AsistenciaDAOImpl();
+        }
+        return asistenciaDAO;
+    }
 }
 

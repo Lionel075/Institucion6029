@@ -21,9 +21,11 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public Usuario validarAcceso(String usuario, String clave) {
         Usuario user = null;
         String sqlBuscar = "SELECT u.id_usuario, u.correo, u.contrasenia, u.id_rol, "
-                + "p.nombres, p.apellidos "
+                + "COALESCE(p.nombres, d.nombres)     AS nombres, "
+                + "COALESCE(p.apellidos, d.apellidos) AS apellidos "
                 + "FROM acc_usuarios u "
                 + "LEFT JOIN per_padres_apoderados p ON p.id_usuario = u.id_usuario "
+                + "LEFT JOIN per_docentes d          ON d.id_usuario = u.id_usuario "
                 + "WHERE (u.id_usuario = ? OR u.correo = ?)";
 
         try (Connection con = Conexion.obtenerConexion();
