@@ -22,7 +22,7 @@ public class SeccionDAOImpl implements SeccionDAO {
     @Override
     public int obtenerVacantesDisponiblesPorGrado(String grado, int idAno) {
         int totalVacantes = 0;
-        String sql = "SELECT SUM(vacantes_disponibles) FROM sch_secciones WHERE LEFT(grado, 1) = LEFT(?, 1) AND id_ano = ?";
+        String sql = "SELECT SUM(vacantes_disponibles) FROM sch_secciones WHERE grado = ? AND id_ano = ?";
 
         try (Connection con = Conexion.obtenerConexion();
              PreparedStatement pstmt = con.prepareStatement(sql)) {

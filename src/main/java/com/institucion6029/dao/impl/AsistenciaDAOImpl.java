@@ -4,17 +4,24 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.institucion6029.dao.AsistenciaDAO;
+import com.institucion6029.exception.ErrorTransaccionException;
 import com.institucion6029.model.AlumnoAsistencia;
 import com.institucion6029.model.SeccionDocente;
 import com.institucion6029.utility.Conexion;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AsistenciaDAOImpl implements AsistenciaDAO {
+
+	private static final Logger LOG = LoggerFactory.getLogger(AsistenciaDAOImpl.class);
 
 	private static final String SQL_SECCIONES = """
 			SELECT s.id_seccion, s.grado, s.seccion, s.turno, s.aula,
@@ -94,8 +101,8 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 					lista.add(mapearSeccion(rs));
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (SQLException e) {
+			LOG.error("Error al listar secciones del docente. idDocente={}, idAno={}", idDocente, idAno, e);
 		}
 		return lista;
 	}
@@ -114,8 +121,8 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 					return mapearSeccion(rs);
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (SQLException e) {
+			LOG.error("Error al obtener sección. idSeccion={}, idDocente={}, idAno={}", idSeccion, idDocente, idAno, e);
 		}
 		return null;
 	}
@@ -146,16 +153,19 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 					lista.add(al);
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (SQLException e) {
+			LOG.error("Error al listar alumnos de la sección. idSeccion={}, idAno={}", idSeccion, idAno, e);
 		}
 		return lista;
 	}
 
 	@Override
-	public void guardarAsistencia(int idSeccion, int idAno, String idDocente, Map<Integer, String> estados) {
+	public void guardarAsistencia(int idSeccion, int idAno, String idDocente, Map<Integer, String> estados)
+			throws ErrorTransaccionException {
 
-		try (Connection con = Conexion.obtenerConexion()) {
+		Connection con = null;
+		try {
+			con = Conexion.obtenerConexion();
 			con.setAutoCommit(false);
 
 			try (PreparedStatement ps = con.prepareStatement(SQL_GUARDAR)) {
@@ -171,14 +181,30 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 					ps.addBatch();
 				}
 				ps.executeBatch();
-				con.commit();
-
-			} catch (Exception ex) {
-				con.rollback();
-				throw ex;
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+
+			con.commit();
+
+		} catch (SQLException e) {
+			if (con != null) {
+				try {
+					con.rollback();
+				} catch (SQLException ex) {
+					LOG.error("Error al hacer rollback de asistencia. idSeccion={}", idSeccion, ex);
+				}
+			}
+			throw new ErrorTransaccionException(
+					"Fallo de base de datos al guardar asistencia. idSeccion=" + idSeccion
+					+ ", idAno=" + idAno + ": " + e.getMessage(), e);
+		} finally {
+			if (con != null) {
+				try {
+					con.setAutoCommit(true);
+					con.close();
+				} catch (SQLException e) {
+					LOG.error("Error al cerrar conexión tras guardar asistencia", e);
+				}
+			}
 		}
 	}
 

@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.institucion6029.model.AlumnoAsistencia;
 import com.institucion6029.model.SeccionDocente;
+import com.institucion6029.exception.ErrorTransaccionException;
 
 public interface AsistenciaDAO {
 
@@ -14,5 +15,6 @@ public interface AsistenciaDAO {
 
 	List<AlumnoAsistencia> listarAlumnos(int idSeccion, int idAno);
 
-	void guardarAsistencia(int idSeccion, int idAno, String idDocente, Map<Integer, String> estados);
+	void guardarAsistencia(int idSeccion, int idAno, String idDocente, Map<Integer, String> estados)
+			throws ErrorTransaccionException;
 }

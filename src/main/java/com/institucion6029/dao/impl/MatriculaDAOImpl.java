@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
+import java.sql.SQLIntegrityConstraintViolationException;
 
 import com.institucion6029.dao.MatriculaDAO;
 import com.institucion6029.model.ReservaMatricula;
@@ -133,6 +134,17 @@ public class MatriculaDAOImpl implements MatriculaDAO {
 
 	    } catch (ReservaDuplicadaException | PeriodoMatriculaCerradoException e) {
 	        throw e;
+	    } catch (SQLIntegrityConstraintViolationException e) {
+	    	LOG.warn("Reserva duplicada detectada por restricción única en BD (condición de carrera). idAlumno={}",
+	    	        reserva.getIdAlumno(), e);
+	        if (con != null) {
+	            try { con.rollback(); } catch (SQLException ex) {
+	            	LOG.error("Error al hacer rollback de la reserva", ex);
+	            }
+	        }
+	        throw new ReservaDuplicadaException(
+	            "El alumno con id=" + reserva.getIdAlumno()
+	            + " ya tiene una reserva Pendiente o Aprobada para el año " + reserva.getIdAnio());
 	    } catch (SQLException e) {
 	    	LOG.error("Error en transacción de reserva con control de cupo. idAlumno={}", reserva.getIdAlumno(), e);
 	        if (con != null) {

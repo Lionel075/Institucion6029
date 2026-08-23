@@ -33,6 +33,8 @@
         <p>• Una vez enviada la solicitud, el sistema validará el aforo (máximo 32 alumnos por sección).</p>
         <p>• La vacante pasará a un estado <strong>PENDIENTE</strong>, otorgándole una ventana de atención de 48 horas
              para realizar el pago. Caso no se culmine el pago se procederá a <strong>LIBERAR</strong> la vacante</p>
+        <p>• El grado seleccionado debe corresponder a la edad del estudiante cumplida al 31 de marzo:
+             1° (6-8 años), 2° (7-9 años), 3° (8-10 años), 4° (9-11 años), 5° (10-12 años), 6° (11-13 años).</p>
     </div>
 
     <!-- El formulario apunta al servlet /matricula mediante método POST -->
