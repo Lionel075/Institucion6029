@@ -197,7 +197,7 @@ body {
 														<c:when test="${s.registrada}">
 															<a
 																href="${pageContext.request.contextPath}/asistencia/tomar?idSeccion=${s.idSeccion}"
-																class="btn btn-outline-primary btn-sm">Ver / Editar</a>
+																class="btn btn-outline-primary btn-sm">Ver Lista</a>
 														</c:when>
 														<c:otherwise>
 															<a

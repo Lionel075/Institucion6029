@@ -110,24 +110,38 @@ public class TomarAsistenciaServlet extends HttpServlet {
 
 		List<AlumnoAsistencia> alumnos = DAOFactory.getAsistenciaDAO().listarAlumnos(idSeccion, anio.getIdAnio());
 
+		if (alumnos.isEmpty()) {
+			response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&ok=1");
+			return;
+		}
+
 		Map<Integer, String> estados = new LinkedHashMap<>();
+		boolean faltanAlumnos = false;
+
 		for (AlumnoAsistencia alumno : alumnos) {
 			String estado = request.getParameter("estado_" + alumno.getIdAlumno());
 			if (estado == null || !ESTADOS_VALIDOS.contains(estado)) {
-				estado = "Presente"; // por defecto todos presentes
+				faltanAlumnos = true;
+				continue;
 			}
 			estados.put(alumno.getIdAlumno(), estado);
 		}
 
-		if (!estados.isEmpty()) {
-		    try {
-		        DAOFactory.getAsistenciaDAO().guardarAsistencia(idSeccion, anio.getIdAnio(), docente.getIdUsuario(),
-		                estados);
-		    } catch (ErrorTransaccionException e) {
-		        LOG.error("Fallo al guardar asistencia. idSeccion={}, docente={}", idSeccion, docente.getIdUsuario(), e);
-		        response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&error=NoGuardado");
-		        return;
-		    }
+		if (faltanAlumnos) {
+			LOG.warn("Envío de asistencia incompleto. idSeccion={}, docente={}, marcados={}/{}",
+					idSeccion, docente.getIdUsuario(), estados.size(), alumnos.size());
+			response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion
+					+ "&error=Incompleto");
+			return;
+		}
+
+		try {
+		    DAOFactory.getAsistenciaDAO().guardarAsistencia(idSeccion, anio.getIdAnio(), docente.getIdUsuario(),
+		            estados);
+		} catch (ErrorTransaccionException e) {
+		    LOG.error("Fallo al guardar asistencia. idSeccion={}, docente={}", idSeccion, docente.getIdUsuario(), e);
+		    response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&error=NoGuardado");
+		    return;
 		}
 
 		response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&ok=1");

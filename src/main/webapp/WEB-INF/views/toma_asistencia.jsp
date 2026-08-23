@@ -85,6 +85,11 @@ tr.fila-ausente {
 	background-color: #fef2f2;
 }
 
+tr.fila-sin-marcar {
+	outline: 2px solid #dc3545;
+	outline-offset: -2px;
+}
+
 /* Radios con apariencia de casilla, como en el wireframe */
 .form-check-input.op-asistencia {
 	border-radius: .25rem;
@@ -188,6 +193,13 @@ tr.fila-ausente {
 		<c:if test="${param.error eq 'NoGuardado'}">
             <div class="alert alert-danger">
                 No se pudo guardar la asistencia. Intenta nuevamente; si el problema persiste, avisa a Dirección.
+            </div>
+        </c:if>
+
+	<c:if test="${param.error eq 'Incompleto'}">
+            <div class="alert alert-warning">
+                <strong>Faltan alumnos por marcar.</strong> Debes seleccionar Presente, Tardanza o Ausente para
+                todos los alumnos de la nómina antes de confirmar.
             </div>
         </c:if>
 		
@@ -424,6 +436,28 @@ tr.fila-ausente {
 	            });
 
 	            refrescar();
+	        });
+	    }
+
+	    var formulario = document.getElementById('formAsistencia');
+	    if (formulario) {
+	        formulario.addEventListener('submit', function(evento) {
+	            var incompletas = [];
+
+	            filas.forEach(function(fila) {
+	                var marcado = fila.querySelector('input[type="radio"]:checked');
+	                fila.classList.toggle('fila-sin-marcar', !marcado);
+	                if (!marcado) {
+	                    incompletas.push(fila);
+	                }
+	            });
+
+	            if (incompletas.length > 0) {
+	                evento.preventDefault();
+	                incompletas[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+	                alert('Faltan ' + incompletas.length + ' alumno(s) por marcar. '
+	                    + 'Selecciona Presente, Tardanza o Ausente para cada uno antes de confirmar.');
+	            }
 	        });
 	    }
 
