@@ -227,6 +227,3 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 		return s;
 	}
 }
-
-
-
