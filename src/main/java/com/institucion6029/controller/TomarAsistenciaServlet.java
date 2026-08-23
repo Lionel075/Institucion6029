@@ -15,6 +15,7 @@ import com.institucion6029.model.AnioEscolar;
 import com.institucion6029.model.SeccionDocente;
 import com.institucion6029.model.Usuario;
 import com.institucion6029.utility.ConfiguracionAcademica;
+import com.institucion6029.exception.ErrorTransaccionException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -23,9 +24,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @WebServlet("/asistencia/tomar")
 public class TomarAsistenciaServlet extends HttpServlet {
 
+	private static final Logger LOG = LoggerFactory.getLogger(TomarAsistenciaServlet.class);
 	private static final long serialVersionUID = 1L;
 
 	private static final Locale ES = Locale.forLanguageTag("es-PE");
@@ -115,8 +120,14 @@ public class TomarAsistenciaServlet extends HttpServlet {
 		}
 
 		if (!estados.isEmpty()) {
-			DAOFactory.getAsistenciaDAO().guardarAsistencia(idSeccion, anio.getIdAnio(), docente.getIdUsuario(),
-					estados);
+		    try {
+		        DAOFactory.getAsistenciaDAO().guardarAsistencia(idSeccion, anio.getIdAnio(), docente.getIdUsuario(),
+		                estados);
+		    } catch (ErrorTransaccionException e) {
+		        LOG.error("Fallo al guardar asistencia. idSeccion={}, docente={}", idSeccion, docente.getIdUsuario(), e);
+		        response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&error=NoGuardado");
+		        return;
+		    }
 		}
 
 		response.sendRedirect(request.getContextPath() + "/asistencia/tomar?idSeccion=" + idSeccion + "&ok=1");

@@ -143,7 +143,13 @@ tr.fila-ausente {
 					aria-label="Close"></button>
 			</div>
 		</c:if>
-
+		
+		<c:if test="${param.error eq 'NoGuardado'}">
+            <div class="alert alert-danger">
+                No se pudo guardar la asistencia. Intenta nuevamente; si el problema persiste, avisa a Dirección.
+            </div>
+        </c:if>
+		
 		<!-- Política de registro -->
 		<div class="alert alert-primary" role="alert">
 			<strong>Política de Registro (Periodo ${anioCalendario}):</strong>

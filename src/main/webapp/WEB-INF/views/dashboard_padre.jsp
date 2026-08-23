@@ -126,6 +126,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </c:if>
+
+        <c:if test="${flashError eq 'EdadNoCorrespondeGrado'}">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Edad no corresponde al grado.</strong> La edad del estudiante no está dentro del rango permitido
+                para el grado académico seleccionado. Verifique la fecha de nacimiento registrada o elija otro grado.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </c:if>
         
         <c:if test="${flashError eq 'GradoSinVacantes'}">
             <div class="alert alert-danger alert-dismissible fade show" role="alert">

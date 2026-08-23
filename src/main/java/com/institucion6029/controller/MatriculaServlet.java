@@ -14,6 +14,7 @@ import com.institucion6029.model.Usuario;
 import com.institucion6029.model.Seccion;
 import com.institucion6029.model.ReservaMatricula;
 import com.institucion6029.model.Alumno;
+import com.institucion6029.model.AnioEscolar;
 import com.institucion6029.exception.ReservaDuplicadaException;
 import com.institucion6029.exception.PeriodoMatriculaCerradoException;
 import com.institucion6029.exception.ErrorTransaccionException;
@@ -114,15 +115,16 @@ public class MatriculaServlet extends HttpServlet {
                 return;
             }
 
-            final int anioOperativo;
+            final AnioEscolar anioEscolarActivo;
             try {
-                anioOperativo = ConfiguracionAcademica.obtenerAnioOperativoActivo();
+                anioEscolarActivo = ConfiguracionAcademica.obtenerAnioEscolarActivo();
             } catch (IllegalStateException e) {
                 System.err.println("[MatriculaServlet] " + e.getMessage());
                 session.setAttribute("flashError", "PeriodoMatriculaCerrado");
                 response.sendRedirect(request.getContextPath() + "/dashboard");
                 return;
             }
+            final int anioOperativo = anioEscolarActivo.getIdAnio();
 
             try {
                 int idAlumno = Integer.parseInt(idAlumnoParam.trim());
@@ -140,6 +142,16 @@ public class MatriculaServlet extends HttpServlet {
                 if ("Retirado".equals(alumno.getEstadoAcademico())) {
                 	LOG.warn("Intento de matrícula sobre alumno Retirado. idAlumno={}", idAlumno);
                     session.setAttribute("flashError", "AlumnoRetirado");
+                    response.sendRedirect(request.getContextPath() + "/dashboard");
+                    return;
+                }
+
+                if (!GradosAcademicos.edadCorrespondeAlGrado(
+                        grado, alumno.getFechaNacimiento(), anioEscolarActivo.getAnioCalendario())) {
+                	LOG.warn("Matrícula rechazada: la edad del alumno no corresponde al grado solicitado. "
+                	        + "idAlumno={}, grado='{}', anioCalendario={}",
+                	        idAlumno, grado, anioEscolarActivo.getAnioCalendario());
+                    session.setAttribute("flashError", "EdadNoCorrespondeGrado");
                     response.sendRedirect(request.getContextPath() + "/dashboard");
                     return;
                 }
