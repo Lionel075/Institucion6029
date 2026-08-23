@@ -23,17 +23,20 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 
 	private static final Logger LOG = LoggerFactory.getLogger(AsistenciaDAOImpl.class);
 
+	// Regla de negocio: un alumno solo debe ser visible para el docente (aula, asistencia)
+	// una vez que Dirección aprobó su reserva. Mientras esté 'Pendiente' o 'Expirada' no cuenta
+	// aquí — por eso las consultas de este DAO filtran siempre por estado_reserva = 'Aprobada'.
 	private static final String SQL_SECCIONES = """
 			SELECT s.id_seccion, s.grado, s.seccion, s.turno, s.aula,
 			       (SELECT COUNT(*) FROM mat_reservas_matricula r
 			         WHERE r.id_seccion = s.id_seccion
 			           AND r.id_ano = s.id_ano
-			           AND r.estado_reserva IN ('Pendiente','Aprobada'))          AS alumnos,
+			           AND r.estado_reserva = 'Aprobada')                          AS alumnos,
 			       (SELECT max_estudiantes_aula FROM web_datos_institucion LIMIT 1) AS capacidad,
 			       (SELECT COUNT(*) FROM asi_asistencias a
 			         WHERE a.id_seccion = s.id_seccion
 			           AND a.fecha_asistencia = CURDATE())                        AS registrados,
-			       (SELECT DATE_FORMAT(MIN(a2.fecha_hora_registro), '%h:%i %p')
+			       (SELECT DATE_FORMAT(MAX(COALESCE(a2.fecha_hora_modificacion, a2.fecha_hora_registro)), '%h:%i %p')
 			          FROM asi_asistencias a2
 			         WHERE a2.id_seccion = s.id_seccion
 			           AND a2.fecha_asistencia = CURDATE())                       AS hora_registro
@@ -48,12 +51,12 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 			       (SELECT COUNT(*) FROM mat_reservas_matricula r
 			         WHERE r.id_seccion = s.id_seccion
 			           AND r.id_ano = s.id_ano
-			           AND r.estado_reserva IN ('Pendiente','Aprobada'))          AS alumnos,
+			           AND r.estado_reserva = 'Aprobada')                          AS alumnos,
 			       (SELECT max_estudiantes_aula FROM web_datos_institucion LIMIT 1) AS capacidad,
 			       (SELECT COUNT(*) FROM asi_asistencias a
 			         WHERE a.id_seccion = s.id_seccion
 			           AND a.fecha_asistencia = CURDATE())                        AS registrados,
-			       (SELECT DATE_FORMAT(MIN(a2.fecha_hora_registro), '%h:%i %p')
+			       (SELECT DATE_FORMAT(MAX(COALESCE(a2.fecha_hora_modificacion, a2.fecha_hora_registro)), '%h:%i %p')
 			          FROM asi_asistencias a2
 			         WHERE a2.id_seccion = s.id_seccion
 			           AND a2.fecha_asistencia = CURDATE())                       AS hora_registro
@@ -72,10 +75,16 @@ public class AsistenciaDAOImpl implements AsistenciaDAO {
 			  INNER JOIN mat_reservas_matricula m ON m.id_alumno = a.id_alumno
 			 WHERE m.id_seccion = ?
 			   AND m.id_ano = ?
-			   AND m.estado_reserva IN ('Pendiente','Aprobada')
+			   AND m.estado_reserva = 'Aprobada'
 			 ORDER BY a.apellidos, a.nombres
 			""";
 
+	// Cada vez que el docente presiona "Confirmar Asistencia" se reenvía el estado de TODOS
+	// los alumnos de la sección (TomarAsistenciaServlet), así que esta UPSERT se ejecuta para
+	// cada fila en cada envío. En el primer registro del día entra por INSERT (fecha_hora_registro);
+	// desde el segundo envío en adelante entra por ON DUPLICATE KEY UPDATE y actualiza
+	// fecha_hora_modificacion — que es lo que las consultas SQL_SECCIONES/SQL_SECCION_UNA usan
+	// para mostrar "Asistencia de Hoy" con la hora del último Confirmar Asistencia.
 	private static final String SQL_GUARDAR = """
 			INSERT INTO asi_asistencias
 			  (id_alumno, id_seccion, id_ano, fecha_asistencia, estado_asistencia, id_docente_registro)

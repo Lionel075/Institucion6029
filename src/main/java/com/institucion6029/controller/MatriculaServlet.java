@@ -75,9 +75,24 @@ public class MatriculaServlet extends HttpServlet {
             return;
         }
 
-        String idAlumno = request.getParameter("idAlumno");
-        if (idAlumno != null) {
-            request.setAttribute("idAlumnoSeleccionado", idAlumno);
+        String idAlumnoParam = request.getParameter("idAlumno");
+        if (idAlumnoParam != null && !idAlumnoParam.isBlank()) {
+            try {
+                int idAlumno = Integer.parseInt(idAlumnoParam.trim());
+                Alumno alumno = DAOFactory.getAlumnoDAO().buscarPorId(idAlumno);
+
+                // Solo se muestra el nombre si el alumno existe y pertenece al padre en sesión
+                if (alumno != null && alumno.getIdPadre().equals(user.getIdUsuario())) {
+                    request.setAttribute("idAlumnoSeleccionado", idAlumnoParam);
+                    request.setAttribute("nombreAlumnoSeleccionado",
+                            alumno.getNombres() + " " + alumno.getApellidos());
+                } else {
+                    LOG.warn("idAlumno consultado en /matricula no pertenece al padre en sesión o no existe. "
+                            + "idAlumno={}, usuario={}", idAlumno, user.getIdUsuario());
+                }
+            } catch (NumberFormatException e) {
+                LOG.warn("idAlumno inválido recibido en /matricula (GET): {}", idAlumnoParam);
+            }
         }
 
         request.getRequestDispatcher("/WEB-INF/views/reserva.jsp").forward(request, response);
