@@ -39,18 +39,18 @@ public class AuthFilter implements Filter {
                 return;
             }
 
-            // 3. REGLA ESTRICTA PARA MATRÍCULA (Solo Rol 1 puede pasar)
-            if (uri.contains("/matricula")) {
-                if (user.getIdRol() == 1) {
+            // 3. REGLA ESTRICTA PARA DIRECCIÓN (Solo Rol 3 puede pasar)
+            if (esRutaOSubruta(uri, contextPath, "/direccion")) {
+                if (user.getIdRol() == 3) {
                     chain.doFilter(request, response);
                 } else {
-                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoPadre");
+                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoDireccion");
                 }
                 return;
             }
-            
+
             // 4. REGLA ESTRICTA PARA ASISTENCIA (Solo Rol 2 puede pasar)
-            if (uri.contains("/asistencia")) {
+            if (esRutaOSubruta(uri, contextPath, "/asistencia")) {
                 if (user.getIdRol() == 2) {
                     chain.doFilter(request, response);
                 } else {
@@ -58,13 +58,13 @@ public class AuthFilter implements Filter {
                 }
                 return;
             }
-            
-            // 5. REGLA ESTRICTA PARA DIRECCIÓN (Solo Rol 3 puede pasar)
-            if (uri.contains("/direccion")) {
-                if (user.getIdRol() == 3) {
+
+            // 5. REGLA ESTRICTA PARA MATRÍCULA (Solo Rol 1 puede pasar)
+            if (esRutaOSubruta(uri, contextPath, "/matricula")) {
+                if (user.getIdRol() == 1) {
                     chain.doFilter(request, response);
                 } else {
-                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoDireccion");
+                    res.sendRedirect(contextPath + "/dashboard?error=NoAutorizadoPadre");
                 }
                 return;
             }
@@ -78,6 +78,17 @@ public class AuthFilter implements Filter {
             res.sendRedirect(contextPath + "/login.jsp?error=SesionExpirada");
             return;
         }
+    }
+
+    /**
+     * Verifica que 'uri' sea exactamente contextPath+base o un subrecurso de esa ruta
+     * (contextPath+base+"/..."). Se usa en vez de String.contains() porque nombres de
+     * rutas que comparten prefijo (ej. "/matricula" y "/direccion/matriculas") generaban
+     * falsos positivos y bloqueaban por error a Dirección.
+     */
+    private boolean esRutaOSubruta(String uri, String contextPath, String base) {
+        String rutaBase = contextPath + base;
+        return uri.equals(rutaBase) || uri.startsWith(rutaBase + "/");
     }
 
 }

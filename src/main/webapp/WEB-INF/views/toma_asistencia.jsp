@@ -109,6 +109,47 @@ tr.fila-ausente {
 	background-image:
 		url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
 }
+
+.opcion-asistencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    margin-right: 14px;
+    margin-bottom: 6px;
+    border: 2px solid #6c757d;
+    border-radius: 8px;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    min-width: 115px;
+    justify-content: center;
+}
+
+.opcion-asistencia:hover {
+    background-color: #f8f9fa;
+}
+
+/* Cuando el radio está seleccionado */
+.opcion-asistencia:has(input:checked) {
+    border-width: 3px;
+}
+
+/* Colores según estado */
+.opcion-asistencia.presente:has(input:checked) {
+    border-color: #198754;
+    background-color: #e9f7ef;
+}
+
+.opcion-asistencia.tardanza:has(input:checked) {
+    border-color: #ffc107;
+    background-color: #fff8df;
+}
+
+.opcion-asistencia.ausente:has(input:checked) {
+    border-color: #dc3545;
+    background-color: #fdebec;
+}
 </style>
 </head>
 <body>
@@ -246,8 +287,7 @@ tr.fila-ausente {
 								${anioCalendario}.</p>
 						</c:when>
 						<c:otherwise>
-							<p class="text-muted small">Por defecto, todos los alumnos
-								figuran como Presente.</p>
+							<p class="text-muted small">Seleccione el estado correspondiente para cada alumno</p>
 							<div class="table-responsive">
 								<table class="table align-middle">
 									<thead>
@@ -280,23 +320,20 @@ tr.fila-ausente {
 														<div class="form-check">
 															<input class="form-check-input op-asistencia op-presente"
 																type="radio" name="estado_${a.idAlumno}"
-																id="p_${a.idAlumno}" value="Presente"
-																${a.estado eq 'Presente' ? 'checked' : ''}> <label
-																class="form-check-label small" for="p_${a.idAlumno}">Asistencia</label>
+																id="p_${a.idAlumno}" value="Presente">
+																<label for="p_${a.idAlumno}">Presente</label>
 														</div>
 														<div class="form-check">
 															<input class="form-check-input op-asistencia op-tardanza"
 																type="radio" name="estado_${a.idAlumno}"
-																id="t_${a.idAlumno}" value="Tardanza"
-																${a.estado eq 'Tardanza' ? 'checked' : ''}> <label
-																class="form-check-label small" for="t_${a.idAlumno}">Tardanza</label>
+																id="t_${a.idAlumno}" value="Tardanza">
+																<label for="t_${a.idAlumno}">Tardanza</label>
 														</div>
 														<div class="form-check">
 															<input class="form-check-input op-asistencia op-ausente"
 																type="radio" name="estado_${a.idAlumno}"
-																id="a_${a.idAlumno}" value="Ausente"
-																${a.estado eq 'Ausente' ? 'checked' : ''}> <label
-																class="form-check-label small" for="a_${a.idAlumno}">Ausente</label>
+																id="a_${a.idAlumno}" value="Ausente">
+																<label for="a_${a.idAlumno}">Ausente</label>
 														</div>
 													</div>
 												</td>
@@ -325,65 +362,73 @@ tr.fila-ausente {
 	<script
 		src="${pageContext.request.contextPath}/js/bootstrap.bundle.min.js"></script>
 	<script>
-		(function() {
-			var filas = document.querySelectorAll('tr.fila-alumno');
+	(function() {
+	    var filas = document.querySelectorAll('tr.fila-alumno');
 
-			function pintarFila(fila) {
-				var marcado = fila.querySelector('input[type="radio"]:checked');
-				var estado = marcado ? marcado.value : 'Presente';
-				var badge = fila.querySelector('.etiqueta-estado');
+	    function pintarFila(fila) {
+	        var marcado = fila.querySelector('input[type="radio"]:checked');
+	        var estado = marcado ? marcado.value : '';
+	        var badge = fila.querySelector('.etiqueta-estado');
 
-				fila.classList.remove('fila-tardanza', 'fila-ausente');
-				badge.className = 'badge etiqueta-estado';
+	        fila.classList.remove('fila-tardanza', 'fila-ausente');
+	        badge.className = 'badge etiqueta-estado';
 
-				if (estado === 'Tardanza') {
-					fila.classList.add('fila-tardanza');
-					badge.classList.add('bg-warning', 'text-dark');
-				} else if (estado === 'Ausente') {
-					fila.classList.add('fila-ausente');
-					badge.classList.add('bg-danger');
-				} else {
-					badge.classList.add('bg-success');
-				}
-				badge.textContent = estado;
-				return estado;
-			}
+	        if (estado === 'Tardanza') {
+	            fila.classList.add('fila-tardanza');
+	            badge.classList.add('bg-warning', 'text-dark');
+	            badge.textContent = 'Tardanza';
+	        } else if (estado === 'Ausente') {
+	            fila.classList.add('fila-ausente');
+	            badge.classList.add('bg-danger');
+	            badge.textContent = 'Ausente';
+	        } else if (estado === 'Presente') {
+	            badge.classList.add('bg-success');
+	            badge.textContent = 'Presente';
+	        } else {
+	            badge.textContent = '';
+	        }
 
-			function refrescar() {
-				var p = 0, t = 0, f = 0;
-				filas.forEach(function(fila) {
-					var e = pintarFila(fila);
-					if (e === 'Tardanza') {
-						t++;
-					} else if (e === 'Ausente') {
-						f++;
-					} else {
-						p++;
-					}
-				});
-				document.getElementById('nPresentes').textContent = p;
-				document.getElementById('nTardanzas').textContent = t;
-				document.getElementById('nFaltas').textContent = f;
-			}
+	        return estado;
+	    }
 
-			document.querySelectorAll('input.op-asistencia').forEach(
-					function(r) {
-						r.addEventListener('change', refrescar);
-					});
+	    function refrescar() {
+	        var p = 0, t = 0, f = 0;
 
-			var limpiar = document.getElementById('btnLimpiar');
-			if (limpiar) {
-				limpiar.addEventListener('click', function() {
-					document.querySelectorAll('input.op-presente').forEach(
-							function(r) {
-								r.checked = true;
-							});
-					refrescar();
-				});
-			}
+	        filas.forEach(function(fila) {
+	            var estado = pintarFila(fila);
 
-			refrescar();
-		})();
+	            if (estado === 'Presente') {
+	                p++;
+	            } else if (estado === 'Tardanza') {
+	                t++;
+	            } else if (estado === 'Ausente') {
+	                f++;
+	            }
+	        });
+
+	        document.getElementById('nPresentes').textContent = p;
+	        document.getElementById('nTardanzas').textContent = t;
+	        document.getElementById('nFaltas').textContent = f;
+	    }
+
+	    document.querySelectorAll('input.op-asistencia').forEach(function(radio) {
+	        radio.addEventListener('change', refrescar);
+	    });
+
+	    var limpiar = document.getElementById('btnLimpiar');
+
+	    if (limpiar) {
+	        limpiar.addEventListener('click', function() {
+	            document.querySelectorAll('input.op-asistencia').forEach(function(radio) {
+	                radio.checked = false;
+	            });
+
+	            refrescar();
+	        });
+	    }
+
+	    refrescar();
+	})();
 	</script>
 </body>
 </html>
